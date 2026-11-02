@@ -161,6 +161,8 @@ npx serve .
 ## The project
 
 Astro Code is a real phygital streetwear brand by **Hamza Nezzar** (Montreal) — designed and built solo for the **Meta Global AI Developer Hackathon** (Oct 26 – Nov 4, 2026), Indie Developer track, theme *Build for Your World*.
+Designed, drawn and built solo by Hamza Nezzar — in pair with an AI assistant, on Meta's models.
+
 
 The demo film combines real app screen recordings with AI-generated street scenes. Physical hoodies are not yet produced: the scans were run on screens with the target images. You talk first. Then you scan.
 
