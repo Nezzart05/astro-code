@@ -31,11 +31,11 @@ Every collection on every social app is a list of accounts. An Astro Code collec
 
 ## One encounter, in four beats
 
-![Beat 1 — Meet: Find Wearers Around Me](beat-1-meet.jpg)
+![Beat 1 — Meet: Find Wearers Around Me](beat-1-wave-approach.jpg)
 
 **Meet** — *Find Wearers Around Me* shows nearby collectors as signs and distances (anonymous hot zones by default — no profiles to scroll). A wearer with a **green dot is waving**: they have declared themselves open — *come say hi, come scan me.*
 
-![Beat 2 — Talk: you talk first, then you scan](beat-2-talk.jpg)
+![Beat 2 — Talk: you talk first, then you scan](beat-2-wave-talk.jpg)
 
 **Talk** — you talk first. Then you scan. When you scan someone else's sign, **Muse Spark** writes an icebreaker between your two signs, right inside the show.
 
