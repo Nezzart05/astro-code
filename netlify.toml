@@ -1,0 +1,9 @@
+# Astro Code — configuration Netlify
+# Ajouté le 26 oct 2026 : sans ce fichier, le déploiement par glisser-déposer
+# publiait le dossier netlify/functions/ comme de simples fichiers statiques
+# et la fonction meta-proxy n'était jamais enregistrée (404 sur
+# /.netlify/functions/meta-proxy, code source lisible en statique).
+
+[build]
+  publish = "."
+  functions = "netlify/functions"

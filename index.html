@@ -1,0 +1,1463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05060f">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
+<link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+<title>ASTRO CODE</title>
+<!-- build v1.9.104 -->
+<!-- three.js pour MindAR (suivi d'image réel) — via importmap, sans build step -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.132.2/examples/jsm/"
+  }
+}
+</script>
+<!-- Typo moderne : Space Grotesk (CDN, fallback system-ui si hors-ligne) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Leaflet : carte minimaliste (onglet Carte) — CDN, sans build step -->
+<style>
+  :root {
+    /* v1.7 — glassmorphism chaud : nuit profonde, halos orange, verre dépoli.
+       (Avant : dégradés violet / bleu / rose.) */
+    --bg: #0a0a10;
+    --violet: #ff8a3c;   /* noms conservés : utilisés un peu partout */
+    --blue:   #ff6a3d;
+    --pink:   #ffb067;
+    --grad: linear-gradient(135deg, #ff9a42 0%, #ff6a3d 55%, #f2452f 100%);
+    --txt: #f6f2ee;
+    --dim: #a89e9a;
+    --glass: rgba(255,255,255,.055);
+    --glass-border: rgba(255,255,255,.10);
+    --radius: 22px;
+  }
+
+  /* Halos orange diffus, posés derrière tout le reste : c'est eux qui
+     donnent au verre quelque chose à flouter. */
+  body::before, body::after {
+    content: ''; position: fixed; z-index: 0; pointer-events: none;
+    border-radius: 50%; filter: blur(70px);
+  }
+  body::before {
+    width: 70vw; height: 70vw; max-width: 460px; max-height: 460px;
+    top: -14vh; left: -18vw;
+    background: radial-gradient(circle, rgba(255,122,45,.42), rgba(255,122,45,0) 70%);
+  }
+  body::after {
+    width: 62vw; height: 62vw; max-width: 400px; max-height: 400px;
+    bottom: 2vh; right: -16vw;
+    background: radial-gradient(circle, rgba(242,69,47,.30), rgba(242,69,47,0) 70%);
+  }
+
+  /* ---- carrousel de l'accueil : coverflow « cartes flottantes » ----
+     Validé par Hamza le 26 oct 2026 (style de sa référence Envato) :
+     carte centrale nette avec le nom du signe, voisines inclinées en 3D
+     et floutées, halo aux couleurs du signe, flottement doux. */
+  .cf { position: relative; margin: 10px -18px 0; min-height: 380px; overflow: hidden;
+        perspective: 1200px; touch-action: pan-y; }
+  .cf-halo { position: absolute; left: 50%; top: 56%; width: 460px; height: 460px; z-index: 0;
+             border-radius: 50%; transform: translate(-50%,-50%); filter: blur(70px);
+             opacity: .5; transition: background .9s ease; pointer-events: none; }
+  /* v1.9.19 — LE CIEL EN HAUT (demande d'Hamza, arc dessiné sur sa
+     capture) : le dégradé entoure LES PHOTOS seulement et ne monte plus
+     jusqu'en haut. Un voile bleu nuit couvre le haut de l'accueil et
+     s'efface avant le carrousel : le haut reste un ciel bleuté. */
+  #screen-onboarding::before {
+    content: ''; position: absolute; left: 0; right: 0; top: 0; height: 290px;
+    background: linear-gradient(180deg, rgba(9,14,44,.92) 0%, rgba(9,14,44,.55) 55%, rgba(9,14,44,0) 100%);
+    z-index: 0; pointer-events: none;
+  }
+  #screen-onboarding .brand, #screen-onboarding .tagline, #screen-onboarding .powered-inline { position: relative; z-index: 1; }
+  /* « Propulsé par Meta AI » juste sous la baseline (v1.9.19). */
+  #screen-onboarding .powered-inline {
+    margin: 3px 0 0; font-size: 10px; letter-spacing: .3em;
+    color: rgba(255,255,255,.5); text-transform: uppercase; text-align: center;
+  }
+  /* v1.9.3 — le halo vit au niveau de l'écran d'accueil (plus dans le
+     carrousel, dont le overflow:hidden le coupait) : le dégradé passe
+     DERRIÈRE le logo et la baseline, sans coupure, et tout le contenu
+     reste au-dessus de lui. */
+  #screen-onboarding { position: relative; }
+  #screen-onboarding .brand, #screen-onboarding .tagline,
+  #screen-onboarding .cf, #screen-onboarding .cf-dots,
+  #screen-onboarding .doors { position: relative; z-index: 1; }
+  .cf-card { position: absolute; left: 50%; top: 50%; width: 232px; aspect-ratio: 3 / 4;
+             margin-left: -116px; margin-top: -155px; border-radius: 26px;
+             transition: transform .85s cubic-bezier(.22,.9,.28,1), filter .85s ease; will-change: transform; }
+  .cf-bob { width: 100%; height: 100%; border-radius: 26px; overflow: hidden; position: relative;
+            animation: cf-bob 6s ease-in-out infinite; border: 1px solid rgba(255,255,255,.14); background: #14141c; }
+  @keyframes cf-bob { 0%,100% { transform: translateY(-5px); } 50% { transform: translateY(6px); } }
+  .cf-bob img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .cf-label { position: absolute; left: 0; right: 0; bottom: 0; padding: 38px 16px 14px; text-align: center;
+              background: linear-gradient(transparent, rgba(0,0,0,.72)); transition: opacity .5s ease; }
+  .cf-label .n { font-size: 25px; font-weight: 700; text-shadow: 0 2px 14px rgba(0,0,0,.5); }
+  .cf-label .s { font-size: 13px; opacity: .85; margin-top: 2px; }
+  .cf-dots { display: flex; gap: 7px; justify-content: center; margin: 8px 0 2px; position: relative; z-index: 2; }
+  .cf-dots button { width: 7px; height: 7px; border-radius: 99px; border: 0; background: rgba(255,255,255,.28);
+                    transition: all .4s ease; padding: 0; cursor: pointer; }
+  .cf-dots button.on { width: 22px; background: #ff7a2d; }
+
+  /* Portes secondaires : du verre, pas du dégradé — une seule action
+     principale à l'écran. */
+  .cta.door-ghost {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    box-shadow: none;
+    color: var(--txt);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .cf-bob { animation: none; }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--txt);
+    font-family: "Space Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+  /* --- fond spatial animé (canvas) --- */
+  #space-bg { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; }
+
+  #app {
+    width: 100%; max-width: 480px; min-height: 100dvh; position: relative; z-index: 1;
+    display: flex; flex-direction: column; padding-bottom: 84px; margin: 0 auto;
+  }
+  .screen { display: none; padding: 20px 18px 28px; animation: fade .25s ease; }
+  .screen.active { display: block; }
+  /* v1.9.96 — LE BUG DU FEED « PETIT ET DÉCENTRÉ » (capture d'Hamza) :
+     body était en display:flex (ligne) : les écrans HORS de #app
+     (collection, souvenirs, feed, carte, jeu…) se plaçaient À CÔTÉ de
+     #app au lieu de prendre sa place — #app rétrécissait à gauche et
+     l'écran actif se retrouvait compressé à ~64 % et poussé à droite.
+     body redevient un flux normal, #app se centre par ses marges, et
+     les écrans directs de body prennent la même colonne de 480 px,
+     avec la place du menu fixe du bas en fin de défilement. */
+  body > .screen { width: 100%; max-width: 480px; margin: 0 auto; padding-bottom: 112px;
+    position: relative; z-index: 1; }
+  /* …et pendant qu'un de ces écrans est actif, #app (qui ne contient
+     que l'accueil et le scan, tous deux masqués) ne doit pas occuper
+     ses 100dvh au-dessus : app.js pose la classe `sub-screen`. */
+  body.sub-screen #app { display: none; }
+  /* L'accueil occupe toute la hauteur : logo en haut, portes en bas, et
+     le carrousel prend l'espace qui reste. Plus de grand vide. */
+  #screen-onboarding.active {
+    display: flex; flex-direction: column;
+    min-height: calc(100dvh - 84px);
+  }
+  #screen-onboarding .cf { flex: 1 1 auto; }
+  #screen-onboarding .doors { margin-bottom: 4px; }
+  /* v1.9.18 — TOUT L'ACCUEIL SUR UNE PAGE, SANS SCROLL (demande d'Hamza :
+     sur son S24 il fallait glisser pour voir les portes et le bas).
+     Hauteur verrouillée, marges resserrées, et le carrousel rétrécit
+     par paliers selon la hauteur de l'écran. */
+  #screen-onboarding.active {
+    height: calc(100dvh - 84px);
+    overflow: hidden;
+    padding: 12px 18px 14px;
+  }
+  #screen-onboarding .brand { margin: 8px 0 2px; }
+  #screen-onboarding .brand-logo { height: 58px; }
+  #screen-onboarding .tagline { margin-bottom: 6px; }
+  #screen-onboarding .cf { margin-top: 2px; min-height: 318px; }
+  #screen-onboarding .doors { margin: 12px 0 2px; gap: 9px; }
+  #screen-onboarding .door { padding: 12px; font-size: 15px; }
+  @media (max-height: 820px) {
+    .cf-card { width: 208px; margin-left: -104px; margin-top: -139px; }
+    #screen-onboarding .cf { min-height: 292px; }
+  }
+  @media (max-height: 740px) {
+    .cf-card { width: 184px; margin-left: -92px; margin-top: -123px; }
+    #screen-onboarding .cf { min-height: 260px; }
+    #screen-onboarding .brand-logo { height: 52px; }
+    #screen-onboarding .door { padding: 10px; }
+  }
+  @media (max-height: 660px) {
+    .cf-card { width: 158px; margin-left: -79px; margin-top: -105px; }
+    #screen-onboarding .cf { min-height: 226px; }
+  }
+  /* Fondu SANS transform : un ancêtre qui anime `transform` devient un bloc
+     conteneur pour les enfants en position:fixed — le scan « plein écran »
+     se retrouvait alors décalé de la hauteur de l'en-tête au lieu de couvrir
+     l'écran. En n'animant que l'opacité, le problème disparaît. */
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+
+  /* --- verre dépoli --- */
+  .glass {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: 0 8px 32px rgba(0,0,0,.35);
+  }
+
+  /* --- logo (vrai logo d'Hamza) --- */
+  .brand { text-align: center; margin: 26px 0 4px; }
+  .brand-logo {
+    height: 52px; width: auto; display: inline-block;
+    filter: drop-shadow(0 2px 14px rgba(124,58,237,.45));
+  }
+  .foot-brand {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .foot-brand img { height: 26px; width: auto; opacity: .9; }
+  .tagline { text-align: center; color: var(--dim); letter-spacing: 3px; font-size: 12px; text-transform: uppercase; margin-bottom: 18px; }
+  .tagline b {
+    background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .badge-meta {
+    display: inline-block; margin: 10px auto 0; padding: 7px 14px; border-radius: 20px;
+    background: rgba(124,58,237,.12); border: 1px solid rgba(124,58,237,.45); color: #c9b3ff;
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase;
+  }
+  .center { text-align: center; }
+
+  /* --- boutons --- */
+  .cta {
+    display: block; width: 100%; padding: 17px; border: none; border-radius: 16px;
+    background: var(--grad); color: #fff; font-size: 18px; font-weight: 700;
+    letter-spacing: 3px; text-transform: uppercase; cursor: pointer;
+    font-family: inherit;
+    box-shadow: 0 8px 30px rgba(255,106,61,.42);
+    transition: transform .08s ease, box-shadow .2s ease, filter .2s ease;
+  }
+  .cta:active { transform: scale(.97); }
+  .cta:disabled { opacity: .5; box-shadow: none; cursor: wait; filter: saturate(.6); }
+  /* feedback instantané : le bouton réagit en < 100 ms au toucher */
+  .cta.activating {
+    animation: pulse .7s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes pulse {
+    0%, 100% { filter: brightness(1); transform: scale(1); }
+    50% { filter: brightness(1.25); transform: scale(.985); }
+  }
+  .ghost {
+    display: inline-block; padding: 11px 18px; border-radius: 14px; cursor: pointer;
+    background: rgba(255,255,255,.05); color: var(--txt);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    font-size: 13px; letter-spacing: 2px; text-transform: uppercase; font-weight: 500;
+    font-family: inherit;
+  }
+  .ghost:active { transform: scale(.96); }
+
+  .pitch { text-align: center; color: var(--dim); font-size: 15px; line-height: 1.6; margin: 16px 8px 20px; }
+  .pitch b { color: var(--txt); }
+
+  /* --- carrousel "La collection" --- */
+  .carousel-title {
+    font-size: 14px; letter-spacing: 3px; text-transform: uppercase; color: var(--txt);
+    margin: 26px 4px 12px; display: flex; align-items: center; gap: 8px;
+  }
+  .carousel-title .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--grad); flex: none;
+  }
+  .carousel {
+    display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory;
+    padding: 4px 2px 10px; margin: 0 -18px; padding-left: 18px; padding-right: 18px;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .carousel::-webkit-scrollbar { display: none; }
+  .hoodie-card {
+    flex: 0 0 168px; scroll-snap-align: start;
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 18px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    overflow: hidden;
+  }
+  .hoodie-card img {
+    width: 100%; height: 190px; object-fit: cover; display: block;
+    background: #0a0a14;
+  }
+  .hoodie-card .hc-name {
+    padding: 10px 12px 12px; font-size: 13px; font-weight: 700; letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+  .hoodie-card .hc-sub { display: block; font-size: 11px; color: var(--dim); font-weight: 400; letter-spacing: 1px; margin-top: 2px; }
+  .vitrine-note { text-align: center; color: var(--dim); font-size: 12px; letter-spacing: 1px; margin-top: 6px; }
+
+  /* --- viseur scan --- */
+  .viewfinder { padding: 20px 16px; margin: 12px 0 18px; }
+  .vf-title {
+    letter-spacing: 3px; font-size: 13px; color: var(--txt); text-transform: uppercase;
+    margin-bottom: 10px; text-align: center; font-weight: 700;
+  }
+  .vf-title .live {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--pink); margin-right: 8px; box-shadow: 0 0 10px var(--pink);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+  #ar-container {
+    /* v1.8 — le scan prend toute la place disponible : on est là pour
+       regarder, pas pour lire l'interface autour. */
+    position: relative; width: 100%; height: 72vh; min-height: 360px;
+    border-radius: 14px; overflow: hidden; margin: 10px 0;
+    border: 1px solid rgba(255,255,255,.08);
+    /* IMPORTANT — fond TRANSPARENT, pas noir :
+       MindAR insère sa <video> caméra avec z-index: -2 (derrière le canvas
+       WebGL transparent). Avec un fond noir sur le conteneur, ce fond se
+       peint PAR-DESSUS la vidéo (ordre de peinture CSS) → écran noir alors
+       que le flux tourne. En transparent, la vidéo reste visible. */
+    background: transparent;
+  }
+  #ar-container video, #ar-container canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  }
+  /* --- scan PLEIN ÉCRAN : « on apprécie vraiment ce qu'on voit » ---
+     Au démarrage du scan, le conteneur prend tout l'écran (la vidéo MindAR
+     et le canvas WebGL sont DEDANS, ils suivent automatiquement).
+     Leçon des écrans noirs : le conteneur reste SANS fond opaque (la vidéo
+     MindAR est en z-index négatif — un fond opaque la masquerait). */
+  /* Pendant le scan plein écran, le bloc de verre parent redevient plat :
+     sans ça, son backdrop-filter sert de bloc conteneur et le scan n'occupe
+     pas réellement tout l'écran. */
+  .ar-host-flat {
+    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;
+    background: transparent !important; border: none !important;
+    padding: 0 !important; box-shadow: none !important;
+  }
+  .ar-host-flat > *:not(#ar-container) { display: none !important; }
+  /* v1.9.52 — demande d'Hamza : le menu du bas RESTE visible pendant le
+     scan, pour que le badge de la récolte glisse jusque dans la case
+     « My collection ». Il passe au-dessus de la vue AR (z-index 50). */
+  body.scanning #bottom-nav { display: flex !important; z-index: 70; }
+  .nav-btn.hv-hit { animation: hvNavHit .8s ease; color: #f5c542 !important; }
+  @keyframes hvNavHit { 0% { transform: scale(1); } 35% { transform: scale(1.16); } 100% { transform: scale(1); } }
+  /* v1.9.53 — notification « nouveau badge » : quand un badge rentre, la
+     case My collection devient ORANGE, texte et icône blancs, et le
+     reste jusqu'à ce qu'on l'ouvre. Aucun numéro, juste la couleur. */
+  #bottom-nav .nav-btn.has-new {
+    background: linear-gradient(160deg, #ff8a2a, #fd7d02);
+    color: #fff;
+    box-shadow: 0 8px 22px rgba(253, 125, 2, .45), inset 0 0 0 1px rgba(255, 255, 255, .25);
+  }
+  /* v1.9.54 — même principe pour « My memories » : JAUNE quand un
+     nouveau souvenir est prêt (texte foncé, lisible sur le jaune). */
+  #bottom-nav .nav-btn.has-new-mem {
+    background: linear-gradient(160deg, #ffd94d, #f5b921);
+    color: #241a02;
+    box-shadow: 0 8px 22px rgba(245, 185, 33, .45), inset 0 0 0 1px rgba(255, 255, 255, .35);
+  }
+  /* v1.9.54 — pendant le scan, les toasts passent au-dessus du menu. */
+  body.scanning #flash { bottom: 182px; }
+  /* v1.9.22 — UN SEUL MENU PAR CONTEXTE (conseil acté avec Hamza) :
+     sur l'accueil, les grandes portes suffisent — la barre du bas
+     n'apparaît qu'À L'INTÉRIEUR des sections, pour naviguer entre
+     elles. L'accueil récupère la hauteur de la barre (plus rien de
+     coupé, la 4e porte devient visible). */
+  body.on-home #bottom-nav { display: none; }
+  /* v1.9.66 — Sur l'écran d'essayage, le menu du bas disparaît : rien
+     ne doit couvrir la caméra (demande d'Hamza, le retour se fait par
+     le bouton Home en haut). */
+  body.on-tryon #bottom-nav { display: none !important; }
+  body.on-home #app { padding-bottom: 0; }
+  body.on-home #screen-onboarding.active { height: 100dvh; }
+  body.scanning::before, body.scanning::after { display: none !important; }
+
+  #ar-container.ar-fullscreen {
+    position: fixed; inset: 0; z-index: 50;
+    width: 100%; height: 100vh; height: 100dvh;
+    border-radius: 0; margin: 0; border: none;
+    background: transparent;
+  }
+  /* contrôles flottants : visibles uniquement en plein écran pendant le scan */
+  .ar-fs-btn {
+    position: absolute; top: calc(14px + env(safe-area-inset-top)); z-index: 60;
+    width: 48px; height: 48px; border-radius: 50%;
+    display: none; align-items: center; justify-content: center;
+    background: rgba(12,12,24,.55); border: 1px solid var(--glass-border); color: #fff;
+    font-size: 20px; cursor: pointer; font-family: inherit;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 4px 16px rgba(0,0,0,.4);
+  }
+  .ar-fs-btn:active { transform: scale(.92); }
+  #ar-container.ar-fullscreen.ar-active .ar-fs-btn { display: flex; }
+  #btn-ar-close { right: 14px; }
+  #btn-ar-flip-fs { left: 14px; }
+
+  /* --- bouton d'enregistrement : en bas au centre, à portée du pouce --- */
+  .rec-btn {
+    top: auto !important;
+    /* v1.9.54 — demande d'Hamza : le REC n'est plus caché par le menu.
+       Il devient PETIT, à l'EXTRÊME DROITE, au-dessus du pied de page. */
+    bottom: calc(102px + env(safe-area-inset-bottom));
+    left: auto; right: 14px; transform: none;
+    width: 54px; height: 54px;
+    background: rgba(12,12,24,.45);
+    border: 2px solid rgba(255,255,255,.75);
+  }
+  .rec-btn:active { transform: scale(.93); }
+  .rec-dot {
+    width: 20px; height: 20px; border-radius: 50%;
+    background: #ff3b2f; transition: all .22s cubic-bezier(.4,0,.2,1);
+  }
+  /* En cours d'enregistrement, le rond devient un carré qui pulse :
+     la métaphore universelle du « appuie pour arrêter ». */
+  .rec-btn.recording .rec-dot {
+    width: 24px; height: 24px; border-radius: 6px;
+    animation: rec-pulse 1.1s ease-in-out infinite;
+  }
+  @keyframes rec-pulse { 0%,100% { opacity: 1; } 50% { opacity: .45; } }
+  .rec-btn.recording { border-color: #ff3b2f; }
+  @media (prefers-reduced-motion: reduce) {
+    .rec-btn.recording .rec-dot { animation: none; }
+  }
+
+  /* --- bouton KEEP A MEMORY (v1.9.21) : pilule centrée au-dessus du REC --- */
+  .memory-btn {
+    top: auto !important;
+    /* v1.9.54 — KEEP A MEMORY à l'EXTRÊME GAUCHE, au-dessus du menu,
+       aligné sur le REC : le centre du visuel reste dégagé. */
+    bottom: calc(106px + env(safe-area-inset-bottom));
+    left: 14px; right: auto; transform: none;
+    width: auto; height: 46px; border-radius: 999px;
+    padding: 0 18px; gap: 7px;
+    background: rgba(12,12,24,.55);
+    border: 1.5px solid rgba(255,255,255,.65);
+    font-size: 12px; letter-spacing: .12em;
+  }
+  .memory-btn:active { transform: scale(.95); }
+  .memory-btn .memory-spark { font-size: 15px; color: #ffb03a; }
+  .memory-btn .memory-label { font-weight: 700; }
+  .memory-btn.busy { opacity: .55; pointer-events: none; }
+  .memory-btn.busy .memory-spark { animation: memory-pulse 1.1s ease-in-out infinite; }
+  @keyframes memory-pulse { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+
+  /* --- mention « Powered by Meta AI » (accueil seulement, discrète) --- */
+  .powered {
+    text-align: center; margin-top: 20px;
+    font-size: 11px; letter-spacing: .22em; text-transform: uppercase;
+    color: rgba(255,255,255,.42);
+  }
+
+  /* --- écran MY MEMORIES (v1.9.16) --- */
+  #memories-grid {
+    display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;
+  }
+  #memories-empty {
+    text-align: center; color: rgba(255,255,255,.6); font-size: 14px;
+    line-height: 1.6; padding: 34px 18px;
+  }
+  .memory-thumb {
+    position: relative; border-radius: 14px; overflow: hidden; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.18); aspect-ratio: 1;
+  }
+  .memory-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .memory-thumb span {
+    position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 8px 5px;
+    font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: #fff;
+    background: linear-gradient(transparent, rgba(0,0,0,.65));
+  }
+
+  /* statut lisible en plein écran (miroir de #ar-status, en bas) */
+  #ar-status-fs {
+    position: absolute; left: 50%; transform: translateX(-50%);
+    /* au-dessus du bouton d'enregistrement, qui occupe le bas au centre */
+    bottom: calc(112px + env(safe-area-inset-bottom)); z-index: 60;
+    display: none; max-width: 92%;
+    padding: 10px 18px; border-radius: 20px;
+    background: rgba(10,10,20,.55); border: 1px solid var(--glass-border);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    color: var(--dim); font-size: 12.5px; text-align: center; line-height: 1.5;
+  }
+  #ar-container.ar-fullscreen.ar-active #ar-status-fs { display: block; }
+  /* --- carte horoscope PAR-DESSUS la vidéo (v1.5 : le scan ne quitte plus
+     le plein écran) — ancrée en bas, max 45 % de la hauteur pour laisser
+     les koïs visibles. Apparition : slide-up + fade 600 ms. */
+  .horo-card {
+    position: absolute; left: 12px; right: 12px; bottom: 76px; z-index: 61;
+    display: none;
+    max-height: 45%;
+    overflow-y: auto;
+    padding: 16px 16px 14px;
+    background: rgba(14,14,28,.62);
+    border: 1px solid var(--glass-border);
+    border-radius: 20px;
+    backdrop-filter: blur(18px) saturate(140%);
+    -webkit-backdrop-filter: blur(18px) saturate(140%);
+    box-shadow: 0 12px 40px rgba(0,0,0,.5), 0 0 24px rgba(124,58,237,.15);
+    opacity: 0; transform: translateY(28px);
+  }
+  /* visible uniquement en plein écran pendant le scan */
+  #ar-container.ar-fullscreen.ar-active .horo-card.visible {
+    display: block;
+    animation: horo-in .6s cubic-bezier(.22,.9,.3,1) forwards;
+  }
+  @keyframes horo-in {
+    from { opacity: 0; transform: translateY(28px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .horo-card.leaving { animation: horo-out .3s ease forwards; }
+  @keyframes horo-out {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(16px); }
+  }
+  .horo-toggle {
+    position: absolute; top: 8px; right: 10px;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: rgba(255,255,255,.07); border: 1px solid var(--glass-border);
+    color: var(--txt); font-size: 17px; cursor: pointer; font-family: inherit;
+    line-height: 1;
+  }
+  .horo-toggle:active { transform: scale(.9); }
+  .horo-head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; padding-right: 40px; }
+  #horo-glyph { font-size: 38px; }
+  #horo-name { font-size: 17px; font-weight: 700; letter-spacing: 3px; }
+  #horo-dates { font-size: 11px; color: var(--dim); letter-spacing: 1.5px; margin-top: 2px; }
+  .horo-factory {
+    font-size: 13px; font-weight: 700; letter-spacing: 2px; margin-bottom: 8px;
+    background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .horo-text { font-size: 14.5px; line-height: 1.6; color: #e4e4f2; font-style: italic; }
+  .horo-text .horo-loading { color: var(--dim); font-style: normal; animation: blink 1.4s ease-in-out infinite; }
+  .horo-actions { margin-top: 10px; }
+  .horo-narrate { font-size: 12px; padding: 9px 14px; }
+  /* mode réduit : petit bandeau (tête seule) */
+  .horo-card.collapsed .horo-body { display: none; }
+  .horo-card.collapsed .horo-head { margin-bottom: 0; }
+  .horo-card.collapsed #horo-glyph { font-size: 26px; }
+  .horo-card.collapsed { padding: 10px 14px; }
+  .ar-status { color: var(--dim); font-size: 13px; line-height: 1.55; margin: 10px 2px 4px; min-height: 20px; text-align: center; }
+  /* v1.9.9 — le bloc de statut texte est RETIRÉ de l'écran de scan
+     (demande d'Hamza : il cache la scène, les gens comprennent le scan
+     sans lui). Les messages continuent d'exister, invisibles. */
+  #ar-status, #ar-status-fs { display: none !important; }
+  .row { display: flex; gap: 10px; justify-content: center; margin-top: 14px; flex-wrap: wrap; }
+
+  /* --- révélation --- */
+  .steps { display: flex; gap: 8px; justify-content: center; margin: 10px 0 16px; flex-wrap: wrap; }
+  .steps .st {
+    font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--dim);
+    border: 1px solid var(--glass-border); border-radius: 20px; padding: 6px 13px;
+    background: rgba(255,255,255,.04);
+  }
+  .steps .st.on { color: #fff; border-color: transparent; background: var(--grad); }
+  #reveal-card { padding: 24px 18px; text-align: center; }
+  #reveal-glyph { font-size: 54px; margin-bottom: 6px; }
+  #reveal-img {
+    width: 170px; height: 170px; border-radius: 50%; margin: 10px auto; display: none;
+    object-fit: cover;
+    border: 3px solid transparent;
+    background: var(--grad) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+  }
+  #reveal-title { letter-spacing: 4px; font-size: 14px; color: var(--dim); text-transform: uppercase; margin-bottom: 10px; }
+  #reveal-factory {
+    font-size: 21px; font-weight: 700; letter-spacing: 2px; margin: 8px 0; text-transform: uppercase;
+    background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  #reveal-horo { color: #dcdcec; font-size: 15px; line-height: 1.65; margin: 12px 4px; font-style: italic; }
+  #reveal-horo-date { color: #ffb35c; font-size: 12px; font-weight: 700; letter-spacing: 2px; margin: 14px 4px 0; }
+
+  /* --- collection --- */
+  .progress { padding: 16px; margin-bottom: 16px; }
+  .progress .bar { height: 10px; background: rgba(255,255,255,.08); border-radius: 6px; overflow: hidden; margin-top: 10px; }
+  #progress-fill { height: 100%; width: 0; background: var(--grad); border-radius: 6px; transition: width .4s; }
+  #collection-count { letter-spacing: 2px; font-size: 14px; text-transform: uppercase; font-weight: 700; }
+  .sign-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .sign-card {
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: 16px;
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    padding: 12px 6px; text-align: center;
+  }
+  .sign-card.unlocked { border-color: rgba(236,72,153,.55); box-shadow: 0 0 18px rgba(236,72,153,.18); }
+  .sign-medal {
+    width: 76px; height: 76px; border-radius: 50%; margin: 0 auto 8px;
+    overflow: hidden; background: #000;
+    border: 2px solid var(--c1, rgba(255,255,255,.12));
+    display: flex; align-items: center; justify-content: center;
+  }
+  .sign-art { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .sign-card.locked .sign-medal { border-color: rgba(255,255,255,.10); }
+  .sign-card.locked .sign-art { filter: grayscale(1) brightness(.55); opacity: .55; }
+  .sign-name { font-size: 12px; letter-spacing: 1.5px; font-weight: 700; text-transform: uppercase; }
+  .sign-dates { font-size: 10px; color: var(--dim); margin-top: 4px; line-height: 1.4; min-height: 28px; }
+
+  /* --- échange / rencontre / empreinte --- */
+  .panel { padding: 18px; margin-bottom: 16px; }
+  .panel h2 { font-size: 16px; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 10px; }
+  .panel h2 .grad-star {
+    background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .panel p { color: var(--dim); font-size: 14px; line-height: 1.6; margin-bottom: 10px; }
+  .scan-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 12px; }
+  .choice-btn {
+    background: rgba(255,255,255,.05); border: 1px solid var(--glass-border); border-radius: 12px; color: var(--txt);
+    padding: 10px 4px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    font-family: inherit;
+  }
+  .choice-btn .g { font-size: 24px; }
+  .choice-btn .n { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+  .choice-btn.small .g { font-size: 20px; }
+  .choice-btn.sel { border-color: var(--pink); box-shadow: 0 0 0 1px var(--pink); }
+  textarea {
+    width: 100%; min-height: 84px; background: rgba(0,0,0,.35); color: var(--txt);
+    border: 1px solid var(--glass-border); border-radius: 12px; padding: 12px;
+    font-size: 15px; font-family: inherit; resize: vertical;
+  }
+  textarea:focus { outline: none; border-color: var(--violet); }
+  .bio-status { font-size: 13px; margin-top: 8px; min-height: 18px; }
+  .bio-status.wait { color: var(--dim); } .bio-status.good { color: #34d399; } .bio-status.bad { color: var(--pink); }
+  #empreinte-current { border-left: 3px solid var(--violet); padding-left: 12px; margin: 12px 0; }
+  #empreinte-current-text { font-size: 17px; font-weight: 700; }
+  #empreinte-current-meta { font-size: 12px; color: var(--dim); margin-top: 4px; }
+
+  /* --- carte : signes à proximité (500 m) --- */
+  .map-head { text-align: center; margin: 6px 0 12px; }
+  .map-title {
+    letter-spacing: 3px; font-size: 15px; text-transform: uppercase; font-weight: 700;
+  }
+  .pulse-dot {
+    display: inline-block; width: 9px; height: 9px; border-radius: 50%;
+    background: var(--pink); margin-right: 8px; box-shadow: 0 0 10px var(--pink);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  .map-sub { color: var(--dim); font-size: 12px; letter-spacing: 1.5px; margin-top: 6px; text-transform: uppercase; }
+  .map-wrap { padding: 10px; margin-bottom: 14px; }
+  /* v1.9.55 — demande d'Hamza : la ligne de statut GPS DANS la carte
+     répétait le texte du dessous et mangeait la hauteur — supprimée.
+     Le cadre de la boussole est réduit (63vh → 50vh ci-dessus) pour
+     que le bouton MY CONSTELLATION tienne à l'écran, EN ORANGE. */
+  #map-status { display: none; }
+  #btn-map-game {
+    background: linear-gradient(160deg, #ff8a2a, #fd7d02) !important;
+    color: #fff !important; border-color: transparent !important;
+    box-shadow: 0 12px 30px rgba(253, 125, 2, .40);
+  }
+  /* v1.9.55 — fiche du signe : la ligne de date de scan. */
+  #reveal-date { margin-top: 7px; font-size: 12px; letter-spacing: 1.6px; color: var(--dim); text-transform: uppercase; }
+  /* v1.9.56 — LE FIL : cartes de posts, avatar = badge du signe. */
+  .feed-card { padding: 14px; margin-bottom: 14px; }
+  .feed-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .feed-avatar { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255, 138, 42, .65); flex: none; }
+  .feed-who { flex: 1; min-width: 0; text-align: left; }
+  .feed-name { font-weight: 700; font-size: 15px; letter-spacing: .02em; }
+  .feed-sub { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--dim); }
+  .feed-time { font-size: 11px; color: var(--dim); flex: none; }
+  .feed-img { width: 100%; border-radius: 14px; display: block; }
+  .feed-cap { margin: 10px 2px 0; font-size: 14px; line-height: 1.45; text-align: left; }
+  .feed-actions { display: flex; align-items: center; gap: 14px; margin-top: 10px; }
+  .like-btn { display: inline-flex; align-items: center; gap: 7px; border: 1px solid rgba(255,255,255,.18);
+    background: rgba(255,255,255,.05); color: #fff; border-radius: 999px; padding: 7px 14px;
+    font: 600 14px system-ui, sans-serif; cursor: pointer; }
+  .like-btn .like-heart { font-size: 16px; line-height: 1; }
+  .like-btn.liked { border-color: rgba(253, 125, 2, .8); background: rgba(253, 125, 2, .16); color: #ffb066; }
+  .feed-born { font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; color: var(--dim); }
+  .feed-empty { color: var(--dim); text-align: center; padding: 26px 10px; line-height: 1.6; }
+  /* v1.9.57 — le post qui vient d'atterrir dans le fil brille une fois. */
+  .feed-card.fresh { border-color: rgba(253, 125, 2, .95); animation: feedFresh 1.8s ease; }
+  @keyframes feedFresh {
+    0% { box-shadow: 0 0 0 0 rgba(253, 125, 2, .55); }
+    100% { box-shadow: 0 0 0 24px rgba(253, 125, 2, 0); }
+  }
+  /* v1.9.58 — PASSEPORT HOODIE (maquette d'Hamza, 30 oct) : le bouton
+     pilule rose en haut à gauche de l'accueil, et l'écran de liaison
+     (étiquette en cercle, libellés cyan, 3 champs). */
+  #screen-onboarding { position: relative; }
+  /* v1.9.90 — LE MENU SANDWICH (demande d'Hamza, 31 oct) : la pilule
+     LINK HOODIE quittait mal la composition de l'accueil. À sa place,
+     un cercle gris discret en haut à gauche, deux traits blancs, et un
+     POINT ORANGE tant que le hoodie n'est pas lié — comme une
+     notification. LINK HOODIE vit en tête du panneau coulissant. */
+  #btn-menu { position: absolute; top: 10px; left: 12px; z-index: 6;
+    width: 44px; height: 44px; border-radius: 50%; padding: 0; cursor: pointer;
+    border: 1px solid rgba(255,255,255,.16); background: rgba(30,30,44,.72);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    display: flex; align-items: center; justify-content: center; }
+  .burger-lines { display: flex; flex-direction: column; gap: 5px; }
+  .burger-lines i { display: block; width: 18px; height: 2px; border-radius: 2px; background: #fff; }
+  .burger-dot { position: absolute; top: 0; right: 0; width: 11px; height: 11px;
+    border-radius: 50%; background: #ff8a2a; border: 2px solid #10101e; display: none; }
+  #btn-menu.has-dot .burger-dot { display: block; }
+  /* Le panneau coulissant du menu */
+  #drawer { position: fixed; inset: 0; z-index: 9000; visibility: hidden; }
+  #drawer.open { visibility: visible; }
+  .drawer-backdrop { position: absolute; inset: 0; background: rgba(4,5,14,.55); opacity: 0; transition: opacity .28s ease; }
+  #drawer.open .drawer-backdrop { opacity: 1; }
+  .drawer-panel { position: absolute; top: 0; left: 0; bottom: 0; width: min(78vw, 300px);
+    background: rgba(15,15,29,.98); border-right: 1px solid rgba(255,255,255,.1);
+    transform: translateX(-103%); transition: transform .3s cubic-bezier(.2,.8,.25,1);
+    display: flex; flex-direction: column; gap: 6px;
+    padding: calc(16px + env(safe-area-inset-top)) 14px 18px; box-sizing: border-box; }
+  #drawer.open .drawer-panel { transform: translateX(0); }
+  .drawer-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .drawer-title { font: 700 15px "Space Grotesk", system-ui, sans-serif; letter-spacing: .12em; color: #fff; }
+  #drawer-close { width: 34px; height: 34px; border-radius: 50%; border: 1px solid rgba(255,255,255,.2);
+    background: transparent; color: #fff; font-size: 14px; cursor: pointer; }
+  .drawer-item { display: flex; align-items: center; justify-content: space-between; text-align: left;
+    border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.04); color: #fff;
+    border-radius: 14px; padding: 14px 16px; font: 600 14.5px system-ui, sans-serif;
+    letter-spacing: .04em; cursor: pointer; }
+  .drawer-item.accent { border-color: rgba(255,138,60,.55); background: rgba(255,138,60,.1); }
+  .drawer-dot { width: 10px; height: 10px; border-radius: 50%; background: #ff8a2a; display: none; flex: none; }
+  #drawer.has-dot .drawer-dot { display: block; }
+  /* Le point du FEED reste allumé en permanence : il y a toujours du
+     nouveau monde qui publie (demande d'Hamza, v1.9.91). */
+  #drawer .drawer-dot.feed-dot { display: block; }
+  .pp-wrap { text-align: center; }
+  .pp-label-img { width: 138px; height: 138px; border-radius: 50%; object-fit: cover;
+    border: 3px solid #f06bd8; box-shadow: 0 10px 30px rgba(240, 107, 216, .25);
+    margin: 4px auto 2px; display: block; }
+  .pp-title { font-size: 21px; font-weight: 800; letter-spacing: 2.5px; margin: 10px 0 4px; }
+  .pp-sub { color: var(--dim); font-size: 13px; line-height: 1.5; margin: 0 auto 16px; max-width: 310px; }
+  .pp-field { text-align: left; margin-bottom: 13px; }
+  .pp-lab { display: block; font: 700 11px ui-monospace, Menlo, monospace;
+    letter-spacing: 1.6px; color: #3fd9e8; margin-bottom: 6px; }
+  .pp-in { width: 100%; box-sizing: border-box; border: 1px solid rgba(255,255,255,.16);
+    background: rgba(255,255,255,.05); color: #fff; border-radius: 12px; padding: 13px 14px;
+    font: 600 15px system-ui, sans-serif; outline: none; }
+  .pp-in:focus { border-color: #3fd9e8; }
+  .pp-in::placeholder { color: rgba(255,255,255,.35); font-weight: 500; }
+  .pp-err { display: none; color: #ff7d9c; font-size: 13px; margin: 2px 0 10px; text-align: left; }
+  .pp-ok { display: none; text-align: center; padding: 16px 10px 6px; }
+  /* v1.9.59 — ESSAYAGE VOCAL : la scène selfie, le gros bouton REC et
+     les étapes du traitement (voix → SAM → génération → vidéo). */
+  .to-stage { position: relative; border-radius: 16px; overflow: hidden;
+    background: #000; aspect-ratio: 3 / 4; max-height: 52vh; margin: 0 auto; }
+  .to-stage video, .to-stage canvas { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .to-stage .mirror { transform: scaleX(-1); }
+  .to-count { position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    font-size: 84px; font-weight: 800; color: #fff; text-shadow: 0 4px 30px rgba(0,0,0,.6); }
+  .to-steps { text-align: left; margin: 14px auto 4px; max-width: 330px; }
+  .to-step { display: flex; gap: 9px; align-items: baseline; padding: 4px 0;
+    color: var(--dim); font-size: 13.5px; }
+  .to-step .dot { width: 9px; height: 9px; border-radius: 50%; background: rgba(255,255,255,.18); flex: none;
+    position: relative; top: 1px; }
+  .to-step.on { color: #fff; }
+  .to-step.on .dot { background: #ffb03a; }
+  .to-step.done { color: #9fe8b1; }
+  .to-step.done .dot { background: #43d17c; }
+  .to-step.fail { color: #ff9db4; }
+  .to-step.fail .dot { background: #ff5d7e; }
+  .to-picks { display: none; gap: 8px; margin: 12px 0 4px; }
+  .to-picks select { flex: 1; min-width: 0; background: rgba(255,255,255,.06); color: #fff;
+    border: 1px solid rgba(255,255,255,.18); border-radius: 10px; padding: 10px 8px;
+    font: 600 13px system-ui, sans-serif; }
+  .to-picks select option { color: #000; }
+  /* v1.9.67 — L'icône étiquette du bouton passeport (SVG d'Hamza). */
+  /* v1.9.63 — La rangée de hoodies à choisir (défilement horizontal). */
+  .to-strip { display: flex; gap: 10px; overflow-x: auto; padding: 4px 2px 8px; }
+  .to-thumb { flex: none; width: 74px; padding: 0; background: none; border: none; cursor: pointer; text-align: center; }
+  .to-thumb img { width: 74px; height: 74px; object-fit: cover; border-radius: 14px;
+    border: 2px solid rgba(255,255,255,.15); display: block; }
+  .to-thumb .gen-box { width: 74px; height: 74px; border-radius: 14px; box-sizing: border-box;
+    border: 2px dashed rgba(240,107,216,.6); display: flex; align-items: center; justify-content: center;
+    font-size: 30px; color: #f06bd8; }
+  .to-thumb span.lbl { display: block; font-size: 10.5px; color: var(--dim); margin-top: 4px; letter-spacing: .4px; }
+  .to-thumb.sel img, .to-thumb.sel .gen-box { border-color: #fd7d02; box-shadow: 0 0 0 2px rgba(253,125,2,.45); }
+  .to-thumb.sel span.lbl { color: #ffb03a; }
+  /* v1.9.63 — L'écran devient 100 % essayage direct : l'ancien mode
+     enregistrement est masqué (son code reste dormant, rien ne casse). */
+  #screen-tryon #to-steps, #screen-tryon #btn-to-record,
+  #screen-tryon #btn-to-again, #screen-tryon #to-download,
+  #screen-tryon #to-picks { display: none !important; }
+  #map {
+    height: 50vh; min-height: 300px; border-radius: 16px; overflow: hidden;
+    background: #050a20; border: 1px solid rgba(140,170,255,.14);
+    position: relative; z-index: 1; isolation: isolate;
+    /* Profondeur (réf. d'Hamza, 27 oct) : le disque-carte est légèrement
+       incliné vers l'arrière, comme posé sur la ville. */
+    transform: perspective(950px) rotateX(9deg);
+    transform-origin: 50% 62%;
+    box-shadow: 0 26px 54px rgba(0,0,12,.6), 0 0 46px rgba(255,130,40,.08);
+  }
+  #map:focus { outline: none; }
+  #map-info { text-align: center; padding: 12px 6px 2px; }
+  .mi-glyph { font-size: 30px; line-height: 1; }
+  .mi-name { font-family: "Space Grotesk", system-ui, sans-serif; font-weight: 700; font-size: 16px; margin: 6px 0 2px; }
+  .mi-sub { color: var(--dim); font-size: 12.5px; line-height: 1.5; margin: 0 0 8px; }
+  /* Leaflet reste sous la nav basse (z-index 5) et le flash (z-index 20) */
+  .leaflet-container { font-family: inherit; background: #0a0a14; }
+  .leaflet-control-zoom a {
+    background: rgba(20,20,32,.85) !important; color: #fff !important;
+    border-color: rgba(255,255,255,.12) !important;
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  }
+  .leaflet-control-attribution {
+    background: rgba(5,6,15,.6) !important; color: #6b6b85 !important; font-size: 9px !important;
+  }
+  .leaflet-control-attribution a { color: #8f8fb0 !important; }
+  .user-div-icon, .sign-div-icon { background: none; border: none; }
+  /* marqueur utilisateur : point pulsant */
+  .user-dot { position: relative; width: 18px; height: 18px; }
+  .user-dot::before {
+    content: ""; position: absolute; inset: 2px; border-radius: 50%;
+    background: var(--grad);
+    box-shadow: 0 0 12px rgba(124,58,237,.9);
+  }
+  .user-dot::after {
+    content: ""; position: absolute; inset: 2px; border-radius: 50%;
+    border: 2px solid rgba(139,92,246,.7);
+    animation: userping 2s ease-out infinite;
+  }
+  @keyframes userping { 0% { transform: scale(1); opacity: .9; } 100% { transform: scale(3.2); opacity: 0; } }
+  /* marqueurs signes : badge glass avec glyphe du zodiaque */
+  .sign-marker {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(18,18,32,.72);
+    border: 1px solid rgba(255,255,255,.22);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    box-shadow: 0 4px 14px rgba(0,0,0,.5), 0 0 12px rgba(124,58,237,.25);
+    font-size: 19px; color: #fff;
+  }
+  /* popup glass */
+  .astro-popup .leaflet-popup-content-wrapper {
+    background: rgba(16,16,30,.92); color: var(--txt);
+    border: 1px solid var(--glass-border); border-radius: 16px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 8px 28px rgba(0,0,0,.5);
+  }
+  .astro-popup .leaflet-popup-content { margin: 14px 16px; text-align: center; line-height: 1.5; }
+  .astro-popup .leaflet-popup-tip { background: rgba(16,16,30,.92); border: 1px solid var(--glass-border); }
+  .astro-popup .leaflet-popup-close-button { color: var(--dim) !important; }
+  .mk-pop-glyph { font-size: 30px; }
+  .mk-pop-name { font-size: 13px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-top: 4px; }
+  .mk-pop-dist { color: var(--dim); font-size: 12px; margin-top: 2px; }
+  .mk-pop-demo {
+    display: inline-block; margin-top: 8px; font-size: 10px; letter-spacing: 2px; text-transform: uppercase;
+    color: #c9b3ff; border: 1px solid rgba(124,58,237,.5); border-radius: 12px; padding: 3px 10px;
+  }
+  #map-error p { color: #ff9d9d; font-size: 13px; text-align: center; margin: 8px 4px; line-height: 1.55; }
+
+  /* --- nav basse --- */
+  /* v1.9.20 — la barre devient la PILULE DE VERRE de la planche d'Hamza :
+     fond sombre flottant, onglet actif = pastille de verre + halo orange.
+     Les 4 icônes sont SES SVG (currentColor) : un seul style partout. */
+  #bottom-nav {
+    position: fixed; bottom: calc(10px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    width: calc(100% - 24px); max-width: 456px; z-index: 5;
+    display: flex; gap: 2px;
+    background: rgba(13,12,20,.72);
+    border: 1px solid var(--glass-border); border-radius: 26px;
+    backdrop-filter: blur(20px) saturate(140%);
+    -webkit-backdrop-filter: blur(20px) saturate(140%);
+    padding: 6px;
+    box-shadow: 0 14px 34px rgba(0,0,0,.45);
+  }
+  #bottom-nav .nav-btn {
+    flex: 1; background: none; border: none; color: rgba(246,242,238,.5); cursor: pointer;
+    padding: 9px 0 7px; font-size: 10px; letter-spacing: 1.6px; text-transform: uppercase;
+    font-family: inherit; font-weight: 700; border-radius: 19px;
+    transition: color .25s ease, background .25s ease, box-shadow .25s ease;
+  }
+  #bottom-nav .nav-btn .ico { display: block; margin-bottom: 3px; }
+  #bottom-nav .nav-btn .ico-svg { width: 24px; height: 24px; }
+  #bottom-nav .nav-btn.active {
+    color: #f6f2ee;
+    background: linear-gradient(160deg, rgba(255,255,255,.14), rgba(255,255,255,.03));
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.09), 0 8px 20px rgba(255,94,58,.28);
+  }
+
+  #flash {
+    position: fixed; left: 50%; bottom: 92px; transform: translateX(-50%) translateY(10px);
+    background: rgba(20,16,34,.85); border: 1px solid rgba(124,58,237,.6); color: #fff; border-radius: 24px;
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    padding: 11px 20px; font-size: 14px; letter-spacing: 1px; opacity: 0; pointer-events: none;
+    transition: opacity .25s, transform .25s; z-index: 20; max-width: 90%; text-align: center;
+  }
+  #flash.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  /* ---- Accueil nettoyé : les deux portes + le bandeau des 12 signes ---- */
+  .doors { display: flex; flex-direction: column; gap: 12px; margin: 26px 0 8px; }
+  .door { width: 100%; padding: 18px; font-size: 17px; letter-spacing: 1px; }
+  /* v1.9.20 — icônes des portes : même SVG que la barre, en orange. */
+  .door { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .door-ico { display: inline-flex; }
+  .door-ico .ico-svg { width: 25px; height: 25px; }
+  .door-ghost .door-ico { color: #ff8a3c; }
+
+  .door-game { background: linear-gradient(135deg, #ff8a3c, #ff5e62); box-shadow: 0 8px 24px rgba(255, 110, 60, .35); }
+  .signs-strip { display: flex; gap: 10px; overflow-x: auto; padding: 14px 2px 6px; scrollbar-width: none; }
+  .signs-strip::-webkit-scrollbar { display: none; }
+  .sign-chip { flex: 0 0 auto; width: 62px; text-align: center; }
+  .sign-chip .chip-glyph { width: 52px; height: 52px; margin: 0 auto 5px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 24px; color: #fff;
+    background: radial-gradient(circle at 32% 30%, var(--c1), var(--c2));
+    box-shadow: 0 4px 14px rgba(0,0,0,.35), inset 0 0 0 1px rgba(255,255,255,.25); }
+  .sign-chip .chip-name { font-size: 9px; letter-spacing: 1px; color: var(--dim); text-transform: uppercase; }
+
+  /* ---- Écran JEU (Constellation) ---- */
+  .game-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+  .game-title { font-size: 19px; font-weight: 800; letter-spacing: .5px; }
+  .game-count { color: var(--gold, #ffd479); font-weight: 700; font-size: 14px; }
+  #game-wrap { position: relative; border-radius: 22px; overflow: hidden; background: #070b1e;
+    box-shadow: 0 18px 44px rgba(0,0,0,.5), inset 0 0 0 1px rgba(255,255,255,.08); }
+  #game-holder { height: 62vh; min-height: 380px; touch-action: none; }
+  #game-holder canvas { display: block; }
+  #game-labels { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .game-label { position: absolute; transform: translate(-50%, -130%); white-space: nowrap;
+    background: rgba(10, 12, 30, .72); border: 1px solid rgba(255,255,255,.16); color: #eef;
+    font-size: 11px; padding: 3px 8px; border-radius: 999px; backdrop-filter: blur(4px); }
+  .game-label b { color: #ffd479; font-weight: 700; }
+  .game-label.anon { opacity: .85; border-style: dashed; }
+  .game-bubble { position: absolute; left: 50%; bottom: 74px; transform: translateX(-50%);
+    max-width: 86%; background: rgba(16, 18, 40, .88); border: 1px solid rgba(255, 212, 121, .35);
+    color: #fff; padding: 10px 14px; border-radius: 16px; font-size: 14px; text-align: center;
+    box-shadow: 0 10px 26px rgba(0,0,0,.45); }
+  /* v1.9.17 — la seule ligne de texte de la constellation : son nom,
+     en bas, discret, qui ne couvre rien. */
+  #game-caption { position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+    font-size: 11px; letter-spacing: .28em; text-transform: uppercase; white-space: nowrap;
+    color: rgba(255,255,255,.55); text-shadow: 0 1px 8px rgba(0,0,0,.6); pointer-events: none; }
+  .game-card { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex;
+    align-items: center; gap: 12px; padding: 12px 14px; border-radius: 18px; }
+  #game-card-glyph { font-size: 34px; line-height: 1; }
+  .game-card-info { flex: 1; min-width: 0; }
+  #game-card-name { font-weight: 800; letter-spacing: 1px; }
+  #game-card-meta { color: var(--dim); font-size: 12px; }
+  .game-tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; }
+  .game-tool { border: 1px solid rgba(255,255,255,.2); background: rgba(10,12,30,.7); color: #fff;
+    border-radius: 999px; padding: 8px 12px; font-size: 14px; backdrop-filter: blur(4px); cursor: pointer; }
+  .game-rec { color: #ff6b6b; font-weight: 800; letter-spacing: .5px; }
+  .game-rec.on { background: #c22525; color: #fff; }
+  .game-rec-state { position: absolute; top: 10px; left: 12px; color: #ff6b6b; font-weight: 800;
+    font-size: 13px; text-shadow: 0 2px 8px rgba(0,0,0,.6); }
+
+  .foot { text-align: center; color: var(--dim); font-size: 11px; letter-spacing: 2px; margin-top: 22px; text-transform: uppercase; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #space-bg { display: none; }
+    .cta.activating { animation: none; }
+    .user-dot::after { animation: none; }
+  }
+
+  /* v1.9.51 — LA RÉCOLTE : panneau de collection + texte de félicitations,
+     affichés par app.js pendant que le badge vole dans le canvas. */
+  #harvest-layer { position: fixed; inset: 0; pointer-events: none; z-index: 80; opacity: 0; transition: opacity .3s ease; }
+  #harvest-layer.show { opacity: 1; }
+  #harvest-text { position: absolute; left: 50%; top: 15%; transform: translate(-50%, -8px); transition: transform .35s ease;
+    background: rgba(14, 12, 26, .78); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(245, 197, 66, .45); border-radius: 999px; padding: 10px 18px;
+    font: 700 15px "Space Grotesk", system-ui, sans-serif; letter-spacing: .4px; color: #fff; white-space: nowrap;
+    box-shadow: 0 10px 34px rgba(0,0,0,.45); }
+  #harvest-layer.show #harvest-text { transform: translate(-50%, 0); }
+  #harvest-text .hv-star { color: #f5c542; }
+</style>
+<style>
+/* v1.9.74 — vidéo d'ouverture (splash) */
+#splash{position:fixed;inset:0;z-index:9999;background:#05081a;transition:opacity .5s ease}
+#splash video{width:100%;height:100%;object-fit:cover;display:block}
+#splash.done{opacity:0;pointer-events:none}
+/* v1.9.89 — « Powered by Meta AI » sur l'intro (demande d'Hamza) :
+   petit, en bas, fondu d'entrée après 1,1 s ; il s'éteint avec le splash. */
+#splash .powered{position:absolute;left:0;right:0;bottom:calc(28px + env(safe-area-inset-bottom));text-align:center;color:rgba(255,255,255,.85);font:500 13px system-ui,sans-serif;letter-spacing:.1em;text-shadow:0 1px 12px rgba(0,0,0,.55);opacity:0;animation:splashPowered 1.1s ease 1.1s forwards}
+@keyframes splashPowered{to{opacity:1}}
+</style>
+</head>
+<body>
+<div id="splash" aria-hidden="true"><video id="splash-video" src="assets/intro.mp4" autoplay muted playsinline preload="auto"></video><div class="powered">Powered by Meta AI</div></div>
+
+<!-- v1.9.90 — LE MENU COULISSANT (bouton sandwich de l'accueil) :
+     LINK HOODIE en tête, avec le point orange tant qu'il n'est pas
+     lié, puis toutes les portes de l'application. -->
+<div id="drawer" aria-hidden="true">
+  <div class="drawer-backdrop"></div>
+  <nav class="drawer-panel">
+    <div class="drawer-head"><span class="drawer-title">ASTRO CODE</span><button id="drawer-close" type="button" aria-label="Close the menu">✕</button></div>
+    <button class="drawer-item accent" type="button" data-go="passport"><span>🏷 LINK HOODIE</span><span class="drawer-dot"></span></button>
+    <button class="drawer-item" type="button" data-go="feed"><span>FEED</span><span class="drawer-dot feed-dot"></span></button>
+    <button class="drawer-item" type="button" data-go="scan"><span>SCAN</span></button>
+    <button class="drawer-item" type="button" data-go="tryon"><span>TRY A HOODIE LIVE</span></button>
+    <button class="drawer-item" type="button" data-go="map"><span>FIND WEARERS AROUND ME</span></button>
+    <button class="drawer-item" type="button" data-go="collection"><span>MY COLLECTION</span></button>
+    <button class="drawer-item" type="button" data-go="memories"><span>MY MEMORIES</span></button>
+  </nav>
+</div>
+<canvas id="space-bg" aria-hidden="true"></canvas>
+
+<div id="app">
+
+  <!-- ============ ONBOARDING ============ -->
+  <section class="screen" id="screen-onboarding">
+    <button id="btn-menu" type="button" aria-label="Open the menu"><span class="burger-lines"><i></i><i></i></span><span class="burger-dot"></span></button>
+    <div class="cf-halo" id="cf-halo"></div>
+    <h1 class="brand"><img class="brand-logo" src="assets/brand/logo.png" alt="Astro Code"></h1>
+    <div class="tagline">STREETWEAR 2.0 <b>×</b> AR EXPERIENCE</div>
+    <div class="powered powered-inline">POWERED BY META AI</div>
+
+    <!-- Carrousel : les pièces et leurs porteurs, en rotation continue.
+         C'est la vitrine — aucun texte, juste les photos. -->
+    <div class="cf" id="cf" aria-label="The collection">
+    </div>
+    <div class="cf-dots" id="cf-dots"></div>
+
+    <!-- Les portes : tout le menu, visible d'un coup, sans scroller. -->
+    <div class="doors">
+      <button class="cta door" id="btn-activate"><span class="door-ico"><svg class="ico-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Scanner"><g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"><path d="M74 48H62a14 14 0 0 1 -14 14V74"/><path d="M126 48H138a14 14 0 0 0 14 14V74"/><path d="M126 152H138a14 14 0 0 1 14 -14V126"/><path d="M74 152H62a14 14 0 0 0 -14 -14V126"/><path d="M124.9 83.2A30.0 30.0 0 0 1 124.9 116.8" stroke-width="11"/><path d="M116.8 124.9A30.0 30.0 0 0 1 83.2 124.9" stroke-width="11"/><path d="M75.1 116.8A30.0 30.0 0 0 1 75.1 83.2" stroke-width="11"/><path d="M83.2 75.1A30.0 30.0 0 0 1 116.8 75.1" stroke-width="11"/><circle cx="100" cy="100" r="7" fill="currentColor" stroke="none"/></g></svg></span>SCAN</button>
+      <button class="cta door door-ghost" id="btn-tryon-door"><span class="door-ico"><svg class="ico-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#FF8A3C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.2 3 3 5.8l1.9 4.3 3.1-1.3V19.5a1.5 1.5 0 0 0 1.5 1.5h5a1.5 1.5 0 0 0 1.5-1.5V8.8l3.1 1.3L21 5.8 15.8 3c-.4 1.5-1.9 2.4-3.8 2.4S8.6 4.5 8.2 3z"/><path d="M12 11l.8 1.7 1.7.8-1.7.8-.8 1.7-.8-1.7-1.7-.8 1.7-.8z" fill="#FF8A3C" stroke="none"/></svg></span>TRY A HOODIE LIVE</button>
+      <button class="cta door door-ghost" id="btn-door-game"><span class="door-ico"><svg class="ico-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Autour de toi"><g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"><path d="M100 128c-26-19-21-42-8-42 5 0 8 3 8 6 0-3 3-6 8-6 13 0 18 23-8 42z" fill="currentColor" stroke="none"/><path d="M58 72a58 58 0 0 0 0 56"/><path d="M142 72a58 58 0 0 1 0 56"/><path d="M34 50a92 92 0 0 0 0 100"/><path d="M166 50a92 92 0 0 1 0 100"/></g></svg></span>FIND WEARERS AROUND ME</button>
+      <button class="cta door door-ghost" id="btn-door-collection"><span class="door-ico"><svg class="ico-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Ma collection"><g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"><circle cx="66" cy="66" r="26" fill="currentColor" stroke="none"/><circle cx="134" cy="66" r="26"/><circle cx="66" cy="134" r="26"/><circle cx="134" cy="134" r="26"/></g></svg></span>MY COLLECTION</button>
+      <button class="cta door door-ghost" id="btn-door-memories"><span class="door-ico"><svg class="ico-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Souvenirs"><g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"><path d="M72 46h78a22 22 0 0 1 22 22v78"/><rect x="28" y="72" width="116" height="100" rx="24"/><circle cx="86" cy="122" r="21"/></g></svg></span>MY MEMORIES</button>
+    </div>
+  </section>
+
+  <!-- ============ SCAN ============ -->
+  <section class="screen" id="screen-scan">
+    <div class="center" style="margin-bottom:6px;">
+      <button class="ghost" id="btn-ar-back">← Home</button>
+    </div>
+
+    <!-- SCAN RÉEL : suivi d'image MindAR (caméra).
+         v1.7 — le scan démarre tout seul à l'entrée sur l'écran. -->
+    <div class="viewfinder glass" id="ar-block">
+      <div class="vf-title"><span class="live"></span>Point at the garment's artwork</div>
+      <div id="ar-container">
+        <!-- Contrôles flottants du mode plein écran (le JS de MindAR ne les
+             touche pas ; stop() ne retire que video/canvas) -->
+        <button id="btn-ar-close" class="ar-fs-btn" aria-label="Exit fullscreen">✕</button>
+        <button id="btn-ar-flip-fs" class="ar-fs-btn" aria-label="Switch camera">🔄</button>
+        <div id="ar-status-fs" aria-live="polite"></div>
+        <!-- v1.8 — la carte horoscope a disparu : elle mangeait le bas de
+             l'écran. La phrase de l'oracle s'écrit maintenant mot après mot
+             DANS l'animation (reveal-2d.js), par-dessus l'image.
+             Reste ici le bouton d'enregistrement : il capture le canvas
+             composé (caméra + koïs + mots) et ouvre le partage. -->
+        <button id="btn-record" class="ar-fs-btn rec-btn" aria-label="Record and share">
+          <span class="rec-dot"></span>
+        </button>
+        <!-- v1.9.21 — UN bouton souvenir dans le scan : KEEP A MEMORY,
+             en pilule centrée AU-DESSUS du REC (la disposition d'origine,
+             revalidée par Hamza : les pilules latérales se chevauchaient
+             avec le REC). Les souvenirs vivent au menu d'accueil. -->
+        <button id="btn-memory" class="ar-fs-btn memory-btn" aria-label="Keep a memory">
+          <span class="memory-spark">✦</span><span class="memory-label">KEEP A MEMORY</span>
+        </button>
+        <!-- v1.9.83 — aucun bouton de rencontre (demande d'Hamza :
+             seuls REC et KEEP A MEMORY existent sur l'écran de scan).
+             La fusion se déclenche en visant l'image duo, cible n° 2
+             du fichier compilé — voir ar-tracking.js. -->
+      </div>
+      </div>
+      <p class="ar-status" id="ar-status">Starting the camera…</p>
+      <div class="row">
+        <!-- Le bouton de démarrage reste dans le DOM (ar-tracking.js s'y
+             réfère) mais il est masqué : le scan se lance tout seul. Il
+             réapparaît comme bouton « Réessayer » si le démarrage échoue. -->
+        <button class="cta" id="btn-ar-start" style="display:none; padding:14px 18px; font-size:15px;">Try again</button>
+        <button class="ghost" id="btn-ar-stop" style="display:none;">Stop</button>
+        <button class="ghost" id="btn-ar-flip" style="display:none;">🔄 Camera</button>
+      </div>
+    </div>
+    <!-- v1.9.51/52 — la récolte : le texte seul (le badge vole dans le canvas
+         jusqu'au bouton « My collection » du menu du bas, visible pendant le scan) -->
+    <div id="harvest-layer" hidden>
+      <div id="harvest-text"></div>
+    </div>
+  </section>
+
+  <!-- ============ RÉVÉLATION ============ -->
+  <section class="screen" id="screen-reveal">
+    <div class="center" style="margin-bottom:6px;">
+      <button class="ghost" id="btn-reveal-back">← Scan</button>
+    </div>
+    <div class="steps">
+      <span class="st" id="step-1">Detection</span>
+      <span class="st" id="step-2">AI character</span>
+      <span class="st" id="step-3">AI horoscope</span>
+    </div>
+    <div id="reveal-card" class="glass">
+      <div id="reveal-glyph">◌</div>
+      <img id="reveal-img" alt="">
+      <div id="reveal-title">LOOKING UP THE ARTWORK…</div>
+      <div id="reveal-factory"></div>
+      <div id="reveal-date"></div>
+      <p id="reveal-horo-date"></p>
+      <p id="reveal-horo"></p>
+      <div class="row">
+        <button class="ghost" id="btn-narrate" style="display:none; border-color:rgba(236,72,153,.6);">🔊 HEAR THE SIGN'S VOICE</button>
+        <button class="cta" id="btn-constellation">✦ IN MY CONSTELLATION</button>
+      </div>
+    </div>
+    <div class="foot">ASTRO CODE</div>
+  </section>
+
+  <!-- ============ COLLECTION ============ -->
+  <section class="screen" id="screen-collection">
+    <div class="center" style="margin-bottom:10px;">
+      <button class="ghost" id="btn-back-collection">← Scan</button>
+    </div>
+    <div class="progress glass">
+      <div id="collection-count">0/12 signs unlocked</div>
+      <div class="bar"><div id="progress-fill"></div></div>
+    </div>
+    <div class="sign-grid" id="collection-grid"></div>
+    <p class="vitrine-note" style="margin-top:12px;">Tap an unlocked sign to open its card.</p>
+    <div class="foot">MY CONSTELLATION · SAVED ON THIS DEVICE</div>
+  </section>
+
+  <!-- ============ MY MEMORIES (v1.9.16) : les affiches souvenirs ============ -->
+  <section class="screen" id="screen-memories">
+    <div class="center" style="margin-bottom:6px;">
+      <button class="ghost" id="btn-memories-back">← Scan</button>
+    </div>
+    <div class="progress glass">
+      <div>✦ MY MEMORIES</div>
+      <p class="vitrine-note" style="margin:6px 0 0;">The moments you immortalized while scanning. Tap one to view, share or download it.</p>
+    </div>
+    <div id="memories-grid"></div>
+    <p id="memories-empty">No memories yet.<br>While a sign is alive on screen, tap <strong>✦ KEEP A MEMORY</strong> —<br>your souvenir will be waiting for you here.</p>
+    <div class="foot">IMMORTALIZED BY META AI · SAVED ON THIS DEVICE</div>
+  </section>
+
+  <!-- ============ ÉCHANGE / RENCONTRE / EMPREINTE ============ -->
+  <section class="screen" id="screen-exchange">
+    <div class="panel glass">
+      <h2><span class="grad-star">✦</span> Imprint <span style="color:var(--dim); font-size:12px;">· 12/12</span></h2>
+      <div id="exchange-progress" style="color:var(--dim); font-size:13px; margin-bottom:10px;"></div>
+      <div id="exchange-locked">
+        <p>The imprint is earned: complete all 12 signs to write the line that will appear on your piece at every scan.</p>
+      </div>
+      <div id="empreinte-locked">
+        <p style="color:var(--dim);">🔒 Locked — complete your constellation.</p>
+      </div>
+      <div id="empreinte-form" style="display:none;">
+        <div id="empreinte-current" style="display:none;">
+          <div id="empreinte-current-text"></div>
+          <div id="empreinte-current-meta"></div>
+        </div>
+        <textarea id="bio-input" maxlength="140" placeholder="Write your imprint… (140 characters max)"></textarea>
+        <div class="row" style="justify-content:flex-start;">
+          <button class="cta" id="btn-publish-bio" style="padding:13px 18px; font-size:15px;">Publish (AI moderation)</button>
+        </div>
+        <div class="bio-status" id="bio-status"></div>
+        <p style="font-size:12px; margin-top:8px;">Editable once per quarter · reviewed within 24h.</p>
+      </div>
+    </div>
+
+    <div class="row" style="justify-content:flex-start; margin-top:10px;">
+      <button class="ghost" id="btn-reset" style="font-size:12px;">Reset the collection</button>
+    </div>
+    <div class="foot">WEARER EXCHANGES · COMING SOON</div>
+  </section>
+
+  <!-- ============ ESSAYAGE VOCAL : dis-le, porte-le (idée d'Hamza, 30 oct) ============ -->
+  <section class="screen" id="screen-tryon">
+    <div class="center" style="margin-bottom:6px;">
+      <button class="ghost" id="btn-tryon-back">← Home</button>
+    </div>
+    <h2 class="sec">👕 TRY IT ON</h2>
+    <p class="vitrine-note" style="text-align:center; max-width:330px; margin:0 auto 12px;">
+      No hoodie yet? <b>Pick one below, go live</b> — and once you're wearing it,
+      just <b>speak</b> to change it: <i>“In red, with a black sign.”</i>
+    </p>
+    <div class="glass" style="padding:14px 16px; margin-bottom:14px; border-color:rgba(240,107,216,.45);">
+      <div class="to-strip" id="to-strip"></div>
+      <button class="cta" id="btn-to-live" style="width:100%;">⚡ GO LIVE WITH THIS HOODIE</button>
+      <button class="cta" id="btn-to-live-stop" style="width:100%; display:none; background:rgba(255,255,255,.14); box-shadow:none;">■ STOP — <span id="to-live-timer">0:00</span></button>
+      <div id="to-voice-hint" style="display:none; margin-top:10px; text-align:center; font-size:12.5px; color:#ffd7f6; letter-spacing:.4px;">🎙 Voice is ON — just speak to change: <i>“en rouge, signe noir”</i></div>
+      <p class="vitrine-note" style="margin:8px 0 0; text-align:center;">Live rendering bills per second — it stops by itself at 1:30.</p>
+    </div>
+    <div class="to-stage">
+      <video id="to-preview" class="mirror" playsinline muted></video>
+      <video id="to-result" class="mirror" playsinline loop controls style="display:none;"></video>
+      <div class="to-count" id="to-count">5</div>
+    </div>
+    <div class="to-steps" id="to-steps">
+      <div class="to-step" data-step="voice"><span class="dot"></span>Your voice → sign &amp; colors (Meta Voice Transcribe)</div>
+      <div class="to-step" data-step="sam"><span class="dot"></span>Finding your t-shirt, frame by frame (SAM 3.1)</div>
+      <div class="to-step" data-step="gen"><span class="dot"></span>Generating your hoodie (Muse Image)</div>
+      <div class="to-step" data-step="mix"><span class="dot"></span>Dressing the video</div>
+    </div>
+    <div class="to-picks" id="to-picks">
+      <select id="to-sign" aria-label="Sign"></select>
+      <select id="to-print" aria-label="Sign color"></select>
+      <select id="to-hoodie" aria-label="Hoodie color"></select>
+    </div>
+    <p class="pp-err" id="to-error" style="text-align:center;"></p>
+    <div style="margin-top:12px;">
+      <button class="cta" id="btn-to-record" style="width:100%;">● RECORD 5 SECONDS — AND SPEAK</button>
+      <button class="cta" id="btn-to-again" style="width:100%; display:none;">↻ TRY ANOTHER ONE</button>
+      <a class="ghost" id="to-download" style="display:none; text-align:center; margin-top:10px; font-size:13px;" download="astro-code-tryon.webm">⬇ Save my try-on video</a>
+    </div>
+    <div class="foot">TRY-ON · VOICE + SAM + MUSE IMAGE — BY META AI</div>
+  </section>
+
+  <!-- ============ PASSEPORT HOODIE : lier son t-shirt (idée d'Hamza, 30 oct) ============ -->
+  <section class="screen" id="screen-passport">
+    <div class="center" style="margin-bottom:6px;">
+      <button class="ghost" id="btn-passport-back">← Home</button>
+    </div>
+    <div class="glass" style="padding:18px 18px 20px;">
+      <div class="pp-wrap">
+        <img class="pp-label-img" src="assets/passport-label.webp" alt="The wash label inside your hoodie">
+        <div class="pp-title">HOODIE PASSPORT</div>
+        <p class="pp-sub">Link the wash label of your t-shirt to your number — and secure your unique rewards. Your code is printed on the label, under the QR code.</p>
+      </div>
+      <div id="pp-form">
+        <div class="pp-field">
+          <label class="pp-lab" for="pp-code">T-SHIRT LABEL CODE</label>
+          <input class="pp-in" id="pp-code" type="text" placeholder="EX: ASTRO-8842-PISCES" autocomplete="off" style="text-transform:uppercase;">
+        </div>
+        <div class="pp-field">
+          <label class="pp-lab" for="pp-phone">PHONE NUMBER (ANTI-CHEAT)</label>
+          <input class="pp-in" id="pp-phone" type="tel" placeholder="+1 (514) 000-0000" autocomplete="off">
+        </div>
+        <div class="pp-field">
+          <label class="pp-lab" for="pp-pseudo">YOUR PUBLIC PSEUDO</label>
+          <input class="pp-in" id="pp-pseudo" type="text" placeholder="@sora_K3" autocomplete="off" maxlength="24">
+        </div>
+        <p class="pp-err" id="pp-error"></p>
+        <button class="cta" id="btn-link-hoodie" style="width:100%;">🏷 LINK MY HOODIE</button>
+        <p class="vitrine-note" style="text-align:center; margin:12px 0 0;">No hoodie yet? Stay in Guest mode — everything stays open.</p>
+      </div>
+      <div class="pp-ok" id="pp-linked">
+        <div style="font-size:34px;">✓</div>
+        <div id="pp-linked-title" style="font-weight:800; letter-spacing:1.5px; margin:6px 0;"></div>
+        <p class="vitrine-note" id="pp-linked-sub" style="margin:0 auto 14px; max-width:300px;"></p>
+        <button class="ghost" id="btn-unlink" style="font-size:12px;">Unlink this hoodie</button>
+      </div>
+    </div>
+    <div class="foot">PASSPORT · ONE HOODIE, ONE WEARER</div>
+  </section>
+
+  <!-- ============ FIL : le réseau des rencontres (idée d'Hamza, 29 oct) ============ -->
+  <section class="screen" id="screen-feed">
+    <div class="center" style="margin-bottom:6px;">
+      <button class="ghost" id="btn-back-feed">← Scan</button>
+    </div>
+    <div class="progress glass">
+      <div>✦ THE FEED</div>
+      <p class="vitrine-note" style="margin:6px 0 0;">Real moments from real wearers. Every post was born from a scan — nothing here was posted from a couch.</p>
+    </div>
+    <div id="feed-list"></div>
+    <div class="foot">FEED · MET, NOT FOLLOWED</div>
+  </section>
+
+  <!-- ============ CARTE : signes à proximité (500 m) ============ -->
+  <section class="screen" id="screen-map">
+    <div class="map-head">
+      <div class="map-title"><span class="pulse-dot"></span>Signs around me</div>
+      <p class="map-sub">500 m radius · collectors nearby</p>
+    </div>
+    <div class="map-wrap glass">
+      <div id="map"></div>
+      <p class="ar-status" id="map-status">Opening the radar…</p>
+      <div id="map-info" style="display:none;"></div>
+    </div>
+    <button class="cta" id="btn-wave" style="margin-top:14px; background:linear-gradient(135deg,#159947,#2ee66b); color:#062b12;">👋&ensp;WAVE — I'M OPEN TO A SCAN</button>
+    <p class="vitrine-note">🟢 = a wearer who chose to be open to encounters. Nobody is ever shown open by default — privacy first.</p>
+    <p class="vitrine-note">GPS and compass calibrate on open — allow location to place wearers around your real position.</p>
+    <button class="cta door door-ghost" id="btn-map-game" style="margin-top:14px;">✦&ensp;MY CONSTELLATION</button>
+    <div class="foot">MAP · 500 M AROUND YOU</div>
+  </section>
+
+  <!-- ============ JEU : CONSTELLATION (volet Jeu, intégré le 20 oct) ============ -->
+  <section class="screen" id="screen-game">
+    <div class="game-head">
+      <div class="game-title">✦ My constellation</div>
+      <div class="game-count" id="game-count">0/12 met</div>
+    </div>
+    <div id="game-wrap">
+      <div id="game-holder"></div>
+      <div id="game-labels"></div>
+      <div id="game-bubble" class="game-bubble" style="display:none;"></div>
+      <div id="game-caption" aria-hidden="true"></div>
+      <div id="game-card" class="game-card glass" style="display:none;">
+        <div id="game-card-glyph">♌</div>
+        <div class="game-card-info">
+          <div id="game-card-name">LION</div>
+          <div id="game-card-meta">@pseudo · 0 m away</div>
+        </div>
+        <button class="cta" id="game-card-btn" style="padding:10px 14px; font-size:14px;">Meet</button>
+        <button class="ghost" id="game-card-close" aria-label="Close">✕</button>
+      </div>
+      <div class="game-tools">
+        <button id="btn-game-music" class="game-tool" aria-label="Cozy music">🔊</button>
+        <button id="btn-game-rec" class="game-tool game-rec" aria-label="Record and share">● REC</button>
+      </div>
+      <div id="game-rec-state" class="game-rec-state" style="display:none;">● REC <span id="game-rec-time">0:00</span></div>
+    </div>
+    <p class="vitrine-note">Swipe to swim through your constellation.</p>
+    <div class="foot">GAME · MY CONSTELLATION</div>
+  </section>
+
+</div>
+
+<nav id="bottom-nav">
+  <button class="nav-btn" data-screen="screen-feed"><span class="ico"><svg class="ico-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Fil d'actualité"><g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"><rect x="46" y="32" width="108" height="136" rx="20"/><circle cx="75" cy="64" r="11" fill="currentColor" stroke="none"/><path d="M97 64h32"/><path d="M64 102h72"/><path d="M64 132h72"/></g></svg></span>Feed</button>
+  <button class="nav-btn" data-screen="screen-map" id="nav-map-btn"><span class="ico"><svg class="ico-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Autour de toi"><g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"><path d="M100 128c-26-19-21-42-8-42 5 0 8 3 8 6 0-3 3-6 8-6 13 0 18 23-8 42z" fill="currentColor" stroke="none"/><path d="M58 72a58 58 0 0 0 0 56"/><path d="M142 72a58 58 0 0 1 0 56"/><path d="M34 50a92 92 0 0 0 0 100"/><path d="M166 50a92 92 0 0 1 0 100"/></g></svg></span>Around me</button>
+  <button class="nav-btn" data-screen="screen-collection"><span class="ico"><svg class="ico-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Ma collection"><g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"><circle cx="66" cy="66" r="26" fill="currentColor" stroke="none"/><circle cx="134" cy="66" r="26"/><circle cx="66" cy="134" r="26"/><circle cx="134" cy="134" r="26"/></g></svg></span>My collection</button>
+  <button class="nav-btn" data-screen="screen-memories"><span class="ico"><svg class="ico-svg" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" role="img" aria-label="Souvenirs"><g fill="none" stroke="currentColor" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"><path d="M72 46h78a22 22 0 0 1 22 22v78"/><rect x="28" y="72" width="116" height="100" rx="24"/><circle cx="86" cy="122" r="21"/></g></svg></span>My memories</button>
+  <!-- Carte (Leaflet) et Échange restent dans le code, hors navigation :
+       nettoyage du 20 oct — 3 menus seulement. Échange reviendra avec la
+       bio spéciale (l'empreinte). -->
+</nav>
+
+<div id="flash"></div>
+
+<script>
+/* ==========================================================================
+   FOND SPATIAL — sobre et léger (étoiles, astéroïdes, étoiles filantes)
+   --------------------------------------------------------------------------
+   ~110 étoiles scintillantes, 3 astéroïdes qui dérivent lentement, une
+   étoile filante discrète toutes les 8 à 12 secondes. Le tout en 2D simple,
+   DPR plafonné à 2, pause quand l'onglet est caché.
+   ========================================================================== */
+(function () {
+  'use strict';
+  var cv = document.getElementById('space-bg');
+  if (!cv) return;
+  var ctx = cv.getContext('2d');
+  var W = 0, H = 0, DPR = 1;
+  var stars = [], asteroids = [], shooting = null, nextShoot = 0;
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = W * DPR; cv.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    seed();
+  }
+
+  function seed() {
+    stars = [];
+    var n = Math.min(130, Math.floor(W * H / 9000));
+    for (var i = 0; i < n; i++) {
+      stars.push({
+        x: Math.random() * W, y: Math.random() * H,
+        r: 0.4 + Math.random() * 1.1,
+        p: Math.random() * Math.PI * 2,
+        s: 0.6 + Math.random() * 1.4,
+        hue: Math.random() < 0.18 ? (Math.random() < 0.5 ? '196,180,255' : '255,190,220') : '255,255,255'
+      });
+    }
+    asteroids = [];
+    for (var j = 0; j < 3; j++) {
+      asteroids.push({
+        x: Math.random() * W, y: Math.random() * H,
+        r: 5 + Math.random() * 9,
+        vx: (0.06 + Math.random() * 0.12) * (Math.random() < 0.5 ? -1 : 1),
+        vy: 0.03 + Math.random() * 0.06,
+        rot: Math.random() * Math.PI * 2,
+        vr: (Math.random() - 0.5) * 0.004,
+        pts: null
+      });
+      // forme irrégulière (caillou)
+      var pts = [], k = 7 + Math.floor(Math.random() * 3);
+      for (var m = 0; m < k; m++) pts.push(0.72 + Math.random() * 0.5);
+      asteroids[j].pts = pts;
+    }
+  }
+
+  function drawAsteroid(a, t) {
+    ctx.save();
+    ctx.translate(a.x, a.y);
+    ctx.rotate(a.rot + t * a.vr * 60);
+    ctx.beginPath();
+    var k = a.pts.length;
+    for (var i = 0; i <= k; i++) {
+      var ang = (i % k) / k * Math.PI * 2;
+      var rr = a.r * a.pts[i % k];
+      var px = Math.cos(ang) * rr, py = Math.sin(ang) * rr;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = 'rgba(90,92,110,0.5)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(160,162,190,0.35)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function spawnShooting() {
+    var sx = W * (0.15 + Math.random() * 0.7);
+    shooting = { x: sx, y: -20, vx: -(4 + Math.random() * 3), vy: 2.5 + Math.random() * 2, life: 1 };
+    nextShoot = performance.now() + 8000 + Math.random() * 4000;
+  }
+
+  function frame(now) {
+    ctx.clearRect(0, 0, W, H);
+    var t = now / 1000;
+
+    // étoiles
+    for (var i = 0; i < stars.length; i++) {
+      var s = stars[i];
+      var tw = 0.45 + 0.55 * Math.abs(Math.sin(t * s.s + s.p));
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(' + s.hue + ',' + tw.toFixed(2) + ')';
+      ctx.fill();
+    }
+
+    // astéroïdes (dérive lente, réapparaissent de l'autre côté)
+    for (var j = 0; j < asteroids.length; j++) {
+      var a = asteroids[j];
+      a.x += a.vx; a.y += a.vy;
+      if (a.x < -30) a.x = W + 30; if (a.x > W + 30) a.x = -30;
+      if (a.y > H + 30) a.y = -30;
+      drawAsteroid(a, t);
+    }
+
+    // étoile filante discrète
+    if (!shooting && now >= nextShoot) spawnShooting();
+    if (shooting) {
+      var sh = shooting;
+      sh.x += sh.vx; sh.y += sh.vy; sh.life -= 0.016;
+      if (sh.life > 0 && sh.y < H + 40) {
+        var grad = ctx.createLinearGradient(sh.x, sh.y, sh.x - sh.vx * 14, sh.y - sh.vy * 14);
+        grad.addColorStop(0, 'rgba(255,255,255,' + (0.85 * sh.life).toFixed(2) + ')');
+        grad.addColorStop(1, 'rgba(180,160,255,0)');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(sh.x, sh.y);
+        ctx.lineTo(sh.x - sh.vx * 14, sh.y - sh.vy * 14);
+        ctx.stroke();
+      } else {
+        shooting = null;
+      }
+    }
+
+    if (!document.hidden) requestAnimationFrame(frame);
+  }
+
+  nextShoot = performance.now() + 5000;
+  window.addEventListener('resize', resize);
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) requestAnimationFrame(frame);
+  });
+  resize();
+  requestAnimationFrame(frame);
+})();
+</script>
+
+<!-- Leaflet : carte (CDN, sans build step) -->
+<script src="meta-ai.js"></script>
+<script src="app.js"></script>
+<script src="map.js"></script>
+<script src="ar-tracking.js"></script>
+<!-- Révélation 2D : ne dépend ni de WebGL ni d'aucun fichier. Filet absolu. -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/selfie_segmentation.js" crossorigin="anonymous"></script>
+<script src="reveal-2d.js"></script>
+<script src="fusion.js"></script>
+<script src="record-share.js"></script>
+<script src="memory.js"></script>
+<script src="feed.js"></script>
+<script src="tryon.js"></script>
+<script type="module" src="sam-mask.js"></script>
+<script type="module" src="game.js"></script>
+<script>
+/* PWA : enregistre le service worker pour rendre l'app installable et plus rapide. */
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch((e) => console.warn('[PWA] SW non enregistré :', e));
+  });
+}
+</script>
+</body>
+</html>
