@@ -74,7 +74,7 @@ All Meta calls go through a server-side proxy (Netlify Function) with an allowli
 - **Duo Fusion** — Pisces + Leo tracked at the same time (half-second decision window) merge into a creature that didn't exist before; fusion never triggers from a solo scan
 - **My Collection** — the badge flies into your collection, which is the map of people you met (2/12 in the demo story)
 - **Write your Imprint** — unlocked at 12/12, auto-moderated by Spark, changeable once per quarter
-![My Collection — every sign is someone you met](collection.jpg)
+![My Collection — every sign is someone you met](demo-collection.gif)
 
 *My Collection — the map of your encounters (2/12 in the demo story).*
 
