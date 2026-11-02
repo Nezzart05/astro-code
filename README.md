@@ -1,3 +1,5 @@
+![Astro Code — Not followed. Met.](cover-not-followed-met.png)
+
 # ASTRO CODE
 
 **The social network that makes you look up from your screen.**
