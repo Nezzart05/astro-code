@@ -166,6 +166,14 @@ Designed, drawn and built solo by Hamza Nezzar — in pair with an AI assistant,
 
 The demo film combines real app screen recordings with AI-generated street scenes. Physical hoodies are not yet produced: the scans were run on screens with the target images. You talk first. Then you scan.
 
+## What's next
+
+The phone is today's screen. The encounter belongs in the street, hands free — the same Wave, the same living sign, seen through smart glasses:
+
+<img src="whats-next-glasses.jpg" width="620" alt="What's next — Astro Code on smart glasses (concept)">
+
+*What's next — « LEO nearby · 4m », and the Wave answered: « On my way! » — **CONCEPT · FUTURE VISION**: the destination, shown as a concept image.*
+
 **Astro Code. Not followed. Met.**
 
 ![Not followed. Met.](closing-not-followed-met.jpg)
