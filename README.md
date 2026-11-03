@@ -14,7 +14,7 @@
 
 ### ▶ Try it live — https://astro-code-5.netlify.app
 
-### 🎬 Watch the 3-minute demo — {{YOUTUBE_URL}}
+### 🎬 Watch the 3-minute demo — https://youtu.be/oHBsF2_kNE0
 
 **No hoodie? No problem.**
 1. Open the live app on your phone (**Android** — the scan does not work on iPhone yet; see *Honest scope*).

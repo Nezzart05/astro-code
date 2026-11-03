@@ -404,26 +404,74 @@
     $('reveal-date').textContent = entry
       ? '✦ Collected · scanned on ' + fmtScanDate(entry.at)
       : '✦ ' + sign.dates;
-    // v1.9.102 — LE CERCLE NE RESTE JAMAIS VIDE (demande d'Hamza, 2 nov :
-    // « on va pas mettre l'icône ou le badge, on va mettre une photo
-    // récoltée des Memories »). Priorité : 1) le Memory le plus récent
-    // de CE signe, 2) l'illustration fournie par Hamza (Poissons/Lion),
-    // 3) l'œuvre du signe. Le personnage IA généré ne remplace que le
-    // cas 3 — et il n'est même pas commandé quand une photo est là.
-    let cardPhoto = null;
+    // v1.9.108 — LE CERCLE NE RESTE JAMAIS VIDE, POUR DE VRAI (la
+    // v1.9.102 choisissait une source sans vérifier qu'elle charge :
+    // un vieux Memory gardé en URL morte donnait un cercle vide, vu
+    // par Hamza le 2 nov — et sa boucle prenait le plus ANCIEN
+    // Memory au lieu du plus récent). Maintenant : candidats dans
+    // l'ordre — 1) les Memories de CE signe, du plus récent au plus
+    // ancien, 2) l'illustration fournie par Hamza (Poissons/Lion),
+    // 3) l'œuvre du signe — et chacun n'est retenu que s'il CHARGE
+    // réellement (préchargement, 1,5 s max par candidat). Le
+    // personnage IA n'est commandé que si aucun candidat ne charge.
+    const photoCandidates = [];
     try {
       const mems = JSON.parse(localStorage.getItem('astrocode_memories_v1') || '[]');
-      for (let i = mems.length - 1; i >= 0; i--) {
-        if (mems[i] && mems[i].sign === sign.id && mems[i].img) { cardPhoto = mems[i].img; break; }
+      for (let i = 0; i < mems.length; i++) {
+        if (mems[i] && mems[i].sign === sign.id && mems[i].img) photoCandidates.push(mems[i].img);
       }
     } catch (e) {}
-    if (!cardPhoto && (sign.id === 'poissons' || sign.id === 'lion')) {
-      cardPhoto = 'assets/card-' + sign.id + '.webp';
+    if (sign.id === 'poissons' || sign.id === 'lion') {
+      photoCandidates.push('assets/card-' + sign.id + '.webp');
     }
-    const photoShown = !!cardPhoto;
-    $('reveal-img').src = cardPhoto || ('assets/signs/' + sign.id + '.webp');
-    $('reveal-img').alt = sign.name;
-    $('reveal-img').style.display = 'block';
+    photoCandidates.push('assets/signs/' + sign.id + '.webp');
+    const revealImg = $('reveal-img');
+    revealImg.alt = sign.name;
+    revealImg.style.display = 'block';
+    // v1.9.109 — PEINTURE SYNCHRONE GARANTIE : l'œuvre du signe
+    // (fichier du build, toujours là) s'affiche TOUT DE SUITE ; la
+    // chaîne de candidats ne fait que la REMPLACER quand un Memory
+    // ou l'illustration a réellement chargé. Filet : si la source
+    // posée échoue au rendu malgré le préchargement, retour à
+    // l'œuvre. Et l'anneau dégradé (wrapper) devient visible.
+    const artSrc = 'assets/signs/' + sign.id + '.webp';
+    revealImg.onerror = () => {
+      if (!revealImg.src.endsWith(artSrc)) revealImg.src = artSrc;
+      else revealImg.onerror = null;
+    };
+    revealImg.src = artSrc;
+    const ring = $('reveal-img-ring');
+    if (ring) ring.style.display = 'block';
+    let photoSettled = false;
+    (function tryPhoto(idx) {
+      if (photoSettled || currentSign !== sign) return;
+      if (idx >= photoCandidates.length) {
+        // Aucun candidat n'a chargé : dernier recours, le personnage IA.
+        photoSettled = true;
+        META_AI.generateSignCharacter(sign).then(char => {
+          if (currentSign !== sign || !char || !char.imageUrl) return;
+          revealImg.src = char.imageUrl;
+          revealImg.alt = char.alt || sign.name;
+        }).catch(() => {});
+        return;
+      }
+      const probe = new Image();
+      let done = false;
+      const timer = setTimeout(() => { if (!done) { done = true; tryPhoto(idx + 1); } }, 1500);
+      probe.onload = () => {
+        if (done) return;
+        done = true; clearTimeout(timer);
+        if (currentSign !== sign) return;
+        photoSettled = true;
+        revealImg.src = photoCandidates[idx];
+      };
+      probe.onerror = () => {
+        if (done) return;
+        done = true; clearTimeout(timer);
+        tryPhoto(idx + 1);
+      };
+      probe.src = photoCandidates[idx];
+    })(0);
     $('reveal-horo').textContent = '';
     $('reveal-horo-date').textContent = '';
     // La voix du signe peut parler tout de suite (fichier voix local) ;
@@ -447,11 +495,8 @@
     cb.textContent = '✦ ' + sign.name.toUpperCase() + ' IN MY CONSTELLATION';
     cb.onclick = () => { window.ASTRO_FOCUS_SIGN = sign.id; show('screen-game'); };
     // Enrichissements IA en arrière-plan — jamais bloquants.
-    if (!photoShown) META_AI.generateSignCharacter(sign).then(char => {
-      if (currentSign !== sign || !char || !char.imageUrl) return;
-      $('reveal-img').src = char.imageUrl;
-      $('reveal-img').alt = char.alt || sign.name;
-    }).catch(() => {});
+    // (v1.9.108 : le personnage IA est devenu le dernier recours de
+    // la chaîne de candidats photo ci-dessus — plus d'appel ici.)
     // v1.9.101 — L'HOROSCOPE DU JOUR (demande d'Hamza, 2 nov ; le film
     // promet « Your horoscope. Every day. ») : UN horoscope par signe
     // et par date, gardé dans le téléphone — le même toute la journée,
@@ -699,6 +744,13 @@
     $('btn-back-collection').addEventListener('click', () => show('screen-scan'));
     $('btn-reveal-back').addEventListener('click', () => show('screen-scan'));
     $('btn-back-feed').addEventListener('click', () => show('screen-scan'));
+    // v1.9.107 — Memories revient à l'ACCUEIL (ordre d'Hamza) : son
+    // ancien bouton « ← Scan » était mort (memory.js cherchait un
+    // bouton Scan dans la barre du bas, qui n'en a pas). Le retour
+    // vit ici, avec les autres. Même traitement pour l'écran
+    // Empreinte, qui n'avait aucun bouton retour.
+    $('btn-memories-back').addEventListener('click', () => show('screen-onboarding'));
+    $('btn-exchange-back').addEventListener('click', () => show('screen-onboarding'));
     // v1.9.58 — Passeport Hoodie : ouverture, retour, liaison, déliaison.
     const pp0 = loadPassport();
     if (pp0) window.ASTRO_OWN_SIGN = pp0.sign;

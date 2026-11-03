@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 <title>ASTRO CODE</title>
-<!-- build v1.9.104 -->
+<!-- build v1.9.112 -->
 <!-- three.js pour MindAR (suivi d'image réel) — via importmap, sans build step -->
 <script type="importmap">
 {
@@ -351,6 +351,17 @@
     color: #241a02;
     box-shadow: 0 8px 22px rgba(245, 185, 33, .45), inset 0 0 0 1px rgba(255, 255, 255, .35);
   }
+  /* v1.9.112 — point orange « nouveauté » sur la porte MY MEMORIES de
+     l'accueil et l'entrée du tiroir : même grammaire que le point du
+     Feed, il reste tant que l'écran Memories n'a pas été ouvert
+     (drapeau persistant, posé par memory.js). */
+  .mem-dot {
+    position: absolute; top: 10px; right: 12px; width: 11px; height: 11px;
+    border-radius: 50%; background: #fd7d02;
+    box-shadow: 0 0 0 3px rgba(253, 125, 2, .25), 0 2px 8px rgba(0, 0, 0, .35);
+    pointer-events: none;
+  }
+  #btn-door-memories, .drawer-item[data-go="memories"] { position: relative; }
   /* v1.9.54 — pendant le scan, les toasts passent au-dessus du menu. */
   body.scanning #flash { bottom: 182px; }
   /* v1.9.22 — UN SEUL MENU PAR CONTEXTE (conseil acté avec Hamza) :
@@ -547,13 +558,17 @@
   .steps .st.on { color: #fff; border-color: transparent; background: var(--grad); }
   #reveal-card { padding: 24px 18px; text-align: center; }
   #reveal-glyph { font-size: 54px; margin-bottom: 6px; }
+  /* v1.9.112 — l'anneau dégradé vit sur un WRAPPER : l'ancien CSS
+     posait un masque « bordure seule » SUR l'img, qui effaçait la
+     photo elle-même (seul l'anneau restait visible — le « cercle
+     vide » vu par Hamza). L'image n'est plus jamais masquée. */
+  #reveal-img-ring {
+    width: 176px; height: 176px; border-radius: 50%; margin: 10px auto;
+    padding: 3px; background: var(--grad); display: none;
+  }
   #reveal-img {
-    width: 170px; height: 170px; border-radius: 50%; margin: 10px auto; display: none;
-    object-fit: cover;
-    border: 3px solid transparent;
-    background: var(--grad) border-box;
-    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor; mask-composite: exclude;
+    width: 100%; height: 100%; border-radius: 50%; display: block;
+    object-fit: cover; background: #14141f;
   }
   #reveal-title { letter-spacing: 4px; font-size: 14px; color: var(--dim); text-transform: uppercase; margin-bottom: 10px; }
   #reveal-factory {
@@ -1018,7 +1033,7 @@
       <div id="ar-container">
         <!-- Contrôles flottants du mode plein écran (le JS de MindAR ne les
              touche pas ; stop() ne retire que video/canvas) -->
-        <button id="btn-ar-close" class="ar-fs-btn" aria-label="Exit fullscreen">✕</button>
+        <button id="btn-ar-close" class="ar-fs-btn" aria-label="Close the scan">✕</button>
         <button id="btn-ar-flip-fs" class="ar-fs-btn" aria-label="Switch camera">🔄</button>
         <div id="ar-status-fs" aria-live="polite"></div>
         <!-- v1.8 — la carte horoscope a disparu : elle mangeait le bas de
@@ -1064,14 +1079,14 @@
     <div class="center" style="margin-bottom:6px;">
       <button class="ghost" id="btn-reveal-back">← Scan</button>
     </div>
-    <div class="steps">
-      <span class="st" id="step-1">Detection</span>
-      <span class="st" id="step-2">AI character</span>
-      <span class="st" id="step-3">AI horoscope</span>
-    </div>
+    <!-- v1.9.112 — pastilles d'étapes SUPPRIMÉES (décision d'Hamza,
+         2 nov : « on en a pas besoin ») : Detection / AI character /
+         AI horoscope ne doivent JAMAIS revenir dans un build.
+         setStep() dans app.js est sans danger sans elles (il vérifie
+         l'existence de chaque pastille avant de l'allumer). -->
     <div id="reveal-card" class="glass">
       <div id="reveal-glyph">◌</div>
-      <img id="reveal-img" alt="">
+      <div id="reveal-img-ring"><img id="reveal-img" alt=""></div>
       <div id="reveal-title">LOOKING UP THE ARTWORK…</div>
       <div id="reveal-factory"></div>
       <div id="reveal-date"></div>
@@ -1082,7 +1097,7 @@
         <button class="cta" id="btn-constellation">✦ IN MY CONSTELLATION</button>
       </div>
     </div>
-    <div class="foot">ASTRO CODE</div>
+    <div class="foot">ASTRO CODE · BUILD v1.9.112</div>
   </section>
 
   <!-- ============ COLLECTION ============ -->
@@ -1102,7 +1117,7 @@
   <!-- ============ MY MEMORIES (v1.9.16) : les affiches souvenirs ============ -->
   <section class="screen" id="screen-memories">
     <div class="center" style="margin-bottom:6px;">
-      <button class="ghost" id="btn-memories-back">← Scan</button>
+      <button class="ghost" id="btn-memories-back">← Home</button>
     </div>
     <div class="progress glass">
       <div>✦ MY MEMORIES</div>
@@ -1115,6 +1130,9 @@
 
   <!-- ============ ÉCHANGE / RENCONTRE / EMPREINTE ============ -->
   <section class="screen" id="screen-exchange">
+    <div class="center" style="margin-bottom:6px;">
+      <button class="ghost" id="btn-exchange-back">← Home</button>
+    </div>
     <div class="panel glass">
       <h2><span class="grad-star">✦</span> Imprint <span style="color:var(--dim); font-size:12px;">· 12/12</span></h2>
       <div id="exchange-progress" style="color:var(--dim); font-size:13px; margin-bottom:10px;"></div>

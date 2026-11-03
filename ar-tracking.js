@@ -848,7 +848,15 @@
     // Contrôles flottants du mode plein écran (dans #ar-container)
     const btnClose = $('btn-ar-close');
     const btnFlipFs = $('btn-ar-flip-fs');
-    if (btnClose) btnClose.addEventListener('click', stop);
+    // v1.9.107 — le ✕ du scan rentre DIRECTEMENT à l'accueil (ordre
+    // d'Hamza) : avant, il arrêtait la caméra sur place et laissait
+    // l'utilisateur devant le bouton « Try again » en bas de page.
+    // show() coupe l'AR tout seul en quittant l'écran scan ; stop()
+    // reste le repli si la navigation n'est pas disponible.
+    if (btnClose) btnClose.addEventListener('click', () => {
+      if (window.ASTRO_SHOW) window.ASTRO_SHOW('screen-onboarding');
+      else stop();
+    });
     if (btnFlipFs) btnFlipFs.addEventListener('click', flipCamera);
     // Sécurité : couper proprement si on quitte l'onglet
     window.addEventListener('pagehide', () => { if (S.started) stop(); });

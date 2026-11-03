@@ -16,6 +16,31 @@
    MEMORIES » (localStorage de l'appareil), où on la rouvre pour la
    partager ou la télécharger.
 
+   v1.9.105 — LA GARANTIE SAM (demande d'Hamza, 2 nov) : « visage et
+   mains réels » n'est plus seulement demandé au prompt. En parallèle
+   de l'appel Muse Image, SAM 3.1 segmente la personne sur l'image
+   figée (aucune contrainte de temps réel sur une image fixe), puis la
+   VRAIE personne détourée est recollée par-dessus l'illustration :
+   le réel est garanti par le code, pas par la consigne. Si SAM
+   échoue ou ne trouve personne, repli silencieux sur l'illustration
+   seule — le comportement d'avant, jamais un souvenir perdu.
+
+   v1.9.106 — VISAGE SEUL + FIABILITÉ (verdict terrain d'Hamza, 2 nov) :
+   le recollage personne entière « ne marche pas très bien » → SAM ne
+   détoure plus que le VISAGE (texte « face » : le masque exclut les
+   cheveux, vérifié sur photo réelle), rétréci à 80 % autour de son
+   centre pour rentrer dans le visage illustré ; tout le reste —
+   hoodie cel-shading, créature, monde — redevient l'illustration du
+   prompt, exactement le style d'avant. ET la perte de souvenirs est
+   traitée : (1) chaque souvenir est transcodé en JPEG léger avant
+   stockage (les PNG/WebP bruts saturaient le localStorage) ;
+   (2) la sauvegarde est VÉRIFIÉE — plus de toast « prêt » mensonger,
+   en cas de stockage plein le message dit la vérité ; (3) la
+   nouveauté est signalée par un drapeau PERSISTANT : bouton Memories
+   jaune dans la barre du bas + point orange sur la porte MY MEMORIES
+   de l'accueil, jusqu'à l'ouverture de l'écran — quitter le scan ne
+   perd plus rien.
+
    Coût : 0,01 $ par souvenir (Muse Image, via le proxy Netlify — la clé
    ne quitte jamais le serveur). Aucun réglage côté utilisateur : la
    recette est la même à chaque fois, seuls le signe et son monde changent.
@@ -104,26 +129,55 @@
         return;
       }
       // Repli : l'image brute de la caméra MindAR.
-      var vids = document.querySelectorAll('#ar-container video');
-      var v = null;
-      for (var i = 0; i < vids.length; i++) { if (vids[i].readyState >= 2 && vids[i].videoWidth > 10) { v = vids[i]; break; } }
-      if (!v) { resolve(null); return; }
-      var c = document.createElement('canvas');
-      c.width = v.videoWidth; c.height = v.videoHeight;
-      c.getContext('2d').drawImage(v, 0, 0);
-      resolve(c);
+      resolve(grabRawVideoCanvas());
     });
   }
 
-  function canvasToDataUrl(cvs) {
+  /* L'image caméra brute (aucun doodle du spectacle dessus) :
+     repli de capture quand le canvas composé n'est pas disponible. */
+  function grabRawVideoCanvas() {
+    var vids = document.querySelectorAll('#ar-container video');
+    var v = null;
+    for (var i = 0; i < vids.length; i++) { if (vids[i].readyState >= 2 && vids[i].videoWidth > 10) { v = vids[i]; break; } }
+    if (!v) return null;
+    var c = document.createElement('canvas');
+    c.width = v.videoWidth; c.height = v.videoHeight;
+    c.getContext('2d').drawImage(v, 0, 0);
+    return c;
+  }
+
+  function resizedCanvas(cvs) {
     var MAX = 1024;
     var w = cvs.width, h = cvs.height;
     var scale = Math.min(1, MAX / Math.max(w, h));
     var out = document.createElement('canvas');
     out.width = Math.round(w * scale); out.height = Math.round(h * scale);
     out.getContext('2d').drawImage(cvs, 0, 0, out.width, out.height);
-    return out.toDataURL('image/jpeg', 0.85);
+    return out;
   }
+
+  function canvasToDataUrl(cvs) {
+    return resizedCanvas(cvs).toDataURL('image/jpeg', 0.85);
+  }
+
+  function loadImg(src) {
+    return new Promise(function (resolve, reject) {
+      var im = new Image();
+      im.onload = function () { resolve(im); };
+      im.onerror = reject;
+      im.src = src;
+    });
+  }
+
+  /* v1.9.110 — RETOUR À LA RECETTE D'ORIGINE (décision d'Hamza,
+     2 nov) : AUCUN détourage SAM dans Memory. Le souvenir, c'est
+     l'illustration de Muse Image, point — le visage et les mains
+     « réels » sont demandés au prompt (recette v4 figée), plus
+     recollés par le code. Les fonctions samFaceMask et
+     compositeMemory (v1.9.105 personne, v1.9.106 visage) sont
+     retirées. Le correctif de fiabilité de la v1.9.106 (sauvegarde
+     vérifiée, JPEG léger, notification persistante) RESTE : c'était
+     une panne séparée, signalée le même jour. */
 
   /* ------------------------------------------------------------------ */
   /* Stockage local des souvenirs                                        */
@@ -131,17 +185,89 @@
   function loadMemories() {
     try { return JSON.parse(localStorage.getItem(LS_KEY) || '[]'); } catch (e) { return []; }
   }
+  /* v1.9.106 — la sauvegarde DIT si elle a réussi. Avant, un échec de
+     quota était avalé en silence et le toast annonçait quand même
+     « prêt » : le souvenir n'existait nulle part (bug terrain d'Hamza).
+     En cas d'échec on évince les anciens souvenirs un par un ; si
+     même le nouveau seul ne rentre pas, on renvoie false et
+     l'appelant affiche la vérité. */
   function saveMemory(entry) {
     var list = loadMemories();
     list.unshift(entry);
     list = list.slice(0, MAX_STORED);
     for (;;) {
-      try { localStorage.setItem(LS_KEY, JSON.stringify(list)); return; }
-      catch (e) {
-        if (list.length <= 1) return; // plus de place : on garde le souvenir affiché, sans stockage
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(list));
+        // Vérification par relecture : ce qui compte, c'est que
+        // l'entrée y soit pour de vrai, pas que setItem n'ait pas crié.
+        var back = loadMemories();
+        return back.length > 0 && back[0] && back[0].at === entry.at;
+      } catch (e) {
+        if (list.length <= 1) return false;
         list.pop();
       }
     }
+  }
+
+  /* v1.9.106 — transcodage JPEG léger avant stockage : une réponse
+     Muse Image brute (PNG/WebP de 1 à 3 Mo) sature le localStorage
+     en quelques souvenirs ; en JPEG ≤ 1024 px à 0,85, un souvenir
+     pèse ~150-350 Ko et les 12 emplacements tiennent. */
+  function shrinkForStorage(dataUrl) {
+    return loadImg(dataUrl).then(function (im) {
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      if (!iw || !ih) return dataUrl;
+      var s = Math.min(1, 1024 / Math.max(iw, ih));
+      var c = document.createElement('canvas');
+      c.width = Math.round(iw * s); c.height = Math.round(ih * s);
+      c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+      return c.toDataURL('image/jpeg', 0.85);
+    }).catch(function () { return dataUrl; });
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* v1.9.106 — notification PERSISTANTE de nouveauté                    */
+  /* Le drapeau vit dans le localStorage : il survit à la navigation    */
+  /* ET au redémarrage de l'app. Tant qu'il est là : le bouton          */
+  /* Memories de la barre du bas est jaune (règle existante .has-new-   */
+  /* mem) et un point orange marque la porte MY MEMORIES de l'accueil   */
+  /* + l'entrée du tiroir. Il ne s'efface que quand l'écran Memories    */
+  /* est ouvert. La génération, elle, ne dépend d'aucun écran : elle    */
+  /* se termine où que l'utilisateur soit dans l'app.                   */
+  /* ------------------------------------------------------------------ */
+  var NEW_FLAG = 'astrocode_mem_new_v1';
+  var PENDING_KEY = 'astrocode_mem_pending_v1';
+
+  function applyBadges() {
+    var has = false;
+    try { has = !!localStorage.getItem(NEW_FLAG); } catch (e) {}
+    var memBtn = document.querySelector('.nav-btn[data-screen="screen-memories"]');
+    if (memBtn) memBtn.classList.toggle('has-new-mem', has);
+    var hosts = [];
+    var door = $('btn-door-memories');
+    if (door) hosts.push(door);
+    var drawer = document.querySelector('.drawer-item[data-go="memories"]');
+    if (drawer) hosts.push(drawer);
+    hosts.forEach(function (h) {
+      var dot = h.querySelector('.mem-dot');
+      if (has && !dot) {
+        dot = document.createElement('span');
+        dot.className = 'mem-dot';
+        h.appendChild(dot);
+      } else if (!has && dot) {
+        dot.remove();
+      }
+    });
+  }
+
+  function markMemoryNew(at) {
+    try { localStorage.setItem(NEW_FLAG, String(at)); } catch (e) {}
+    applyBadges();
+  }
+
+  function clearMemoryNew() {
+    try { localStorage.removeItem(NEW_FLAG); } catch (e) {}
+    applyBadges();
   }
 
   /* ------------------------------------------------------------------ */
@@ -194,11 +320,17 @@
         'background:linear-gradient(160deg,#ff8a2a,#fd7d02);color:#fff;font:700 14px system-ui,sans-serif;cursor:pointer">Post to Feed</button>' +
         '<button type="button" data-act="share" style="border:0;border-radius:999px;padding:11px 20px;' +
         'background:linear-gradient(160deg,#9d6bff,#7c3aed);color:#fff;font:600 14px system-ui,sans-serif;cursor:pointer">Share externally</button>' +
+        // v1.9.111 — Delete (demande d'Hamza) : sortir les souvenirs
+        // ratés sans remplir le stockage pour rien. Même rangée que
+        // Post et Share, en rouge discret.
+        '<button type="button" data-act="del" style="border:1px solid rgba(255,90,90,.55);border-radius:999px;padding:11px 20px;' +
+        'background:rgba(255,60,60,.12);color:#ff9d9d;font:600 14px system-ui,sans-serif;cursor:pointer">Delete</button>' +
         '</div>';
       p.addEventListener('click', function (ev) {
         var act = ev.target && ev.target.getAttribute && ev.target.getAttribute('data-act');
         if (!act || !state.pending) return;
         if (act === 'share') shareMemory(state.pending);
+        else if (act === 'del') { deleteMemory(state.pending); }
         else if (act === 'dl') { downloadMemory(state.pending); }
         else if (act === 'x') { p.style.display = 'none'; }
         else if (act === 'post') {
@@ -242,6 +374,20 @@
 
   function hidePanel() { var p = $('memory-panel'); if (p) p.style.display = 'none'; }
 
+  /* v1.9.111 — suppression d'un souvenir (demande d'Hamza) : on le
+     retire du stockage, la grille se rafraîchit, le panneau se
+     ferme. Les posts du Feed qui le référencent gardent leur
+     référence — ils affichent alors leur repli, comme prévu. */
+  function deleteMemory(entry) {
+    if (!entry) return;
+    var list = loadMemories().filter(function (m) { return m.at !== entry.at; });
+    try { localStorage.setItem(LS_KEY, JSON.stringify(list)); } catch (e) {}
+    state.pending = null;
+    hidePanel();
+    render();
+    toast('Memory deleted.');
+  }
+
   function dataUrlToFile(dataUrl, filename) {
     return fetch(dataUrl).then(function (r) { return r.blob(); })
       .then(function (b) { try { return new File([b], filename, { type: b.type || 'image/png' }); } catch (e) { return null; } });
@@ -280,7 +426,12 @@
     toast('✦ Creating your memory — you\'ll find it in My Memories.');
     grabCanvas().then(function (cvs) {
       if (!cvs) throw new Error('no-frame');
-      var dataUrl = canvasToDataUrl(cvs);
+      var photo = resizedCanvas(cvs);
+      var dataUrl = photo.toDataURL('image/jpeg', 0.85);
+      // v1.9.106 — le travail est déclaré EN COURS (persistant) : si
+      // l'app est fermée pendant la génération, le prochain lancement
+      // le dira au lieu de perdre le souvenir en silence.
+      try { localStorage.setItem(PENDING_KEY, JSON.stringify({ at: Date.now(), sign: signId })); } catch (e) {}
       var ctrl = new AbortController();
       var timer = setTimeout(function () { ctrl.abort(); }, 120000);
       // META_AI.callApi ne prend pas de signal : on borne l'attente ici.
@@ -292,26 +443,48 @@
           n: 1,
         }),
         new Promise(function (_, rej) { ctrl.signal.addEventListener('abort', function () { rej(new Error('timeout')); }); }),
-      ]).then(function (data) { clearTimeout(timer); return data; });
+      ]).then(function (data) {
+        clearTimeout(timer);
+        return data;
+      });
     }).then(function (data) {
+      // v1.9.106 — la fin de parcours vérifiée : transcodage léger,
+      // sauvegarde CONTRÔLÉE, et seulement alors le signal « prêt »
+      // (événement + drapeau persistant + badge). Si le stockage est
+      // plein, le message dit la vérité — plus jamais de « prêt »
+      // pour un souvenir qui n'existe pas.
+      function finishWith(img) {
+        var entry = { sign: signId, at: Date.now(), img: img };
+        var done = function (finalImg) {
+          entry.img = finalImg;
+          var ok = saveMemory(entry);
+          try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
+          state.busy = false; setBtnBusy(false);
+          if (ok) {
+            render();
+            markMemoryNew(entry.at);
+            window.dispatchEvent(new CustomEvent('astrocode:memory-ready'));   // v1.9.54 — notification jaune sur « My memories »
+            toast('✦ Your memory is ready — it\'s waiting in My Memories.');
+          } else {
+            toast('Storage is full — delete a memory in My Memories, then try again.');
+          }
+        };
+        if (img && img.indexOf('data:') === 0) { shrinkForStorage(img).then(done); }
+        else done(img);
+      }
       var item = data && data.data && data.data[0];
       var b64 = item && item.b64_json;
       if (!b64 && item && item.url) { // repli : l'API renvoie une URL
-        state.busy = false; setBtnBusy(false);
-        saveMemory({ sign: signId, at: Date.now(), img: item.url });
-        render();
-        window.dispatchEvent(new CustomEvent('astrocode:memory-ready'));   // v1.9.54 — notification jaune sur « My memories »
-        toast('✦ Your memory is ready — it\'s waiting in My Memories.');
+        finishWith(item.url);
         return;
       }
       if (!b64) throw new Error('bad-response');
       var mime = b64.indexOf('UklGR') === 0 ? 'image/webp' : (b64.indexOf('/9j/') === 0 ? 'image/jpeg' : 'image/png');
-      saveMemory({ sign: signId, at: Date.now(), img: 'data:' + mime + ';base64,' + b64 });
-      state.busy = false; setBtnBusy(false);
-      render();
-      window.dispatchEvent(new CustomEvent('astrocode:memory-ready'));   // v1.9.54 — notification jaune sur « My memories »
-      toast('✦ Your memory is ready — it\'s waiting in My Memories.');
+      var illoSrc = 'data:' + mime + ';base64,' + b64;
+      // v1.9.110 — l'illustration de Muse Image, telle quelle.
+      finishWith(illoSrc);
     }).catch(function (err) {
+      try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
       state.busy = false; setBtnBusy(false);
       console.warn('[MEMORY]', err);
       toast(err && err.message === 'no-frame'
@@ -359,12 +532,36 @@
     if (id) state.lastSign = id;
   });
 
+  // v1.9.106 — ouvrir l'écran Memories éteint la nouveauté (le clic
+  // qui y mène suffit : barre du bas, porte de l'accueil, tiroir).
+  document.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest
+      ? e.target.closest('[data-screen="screen-memories"], #btn-door-memories, [data-go="memories"]')
+      : null;
+    if (t) clearMemoryNew();
+  });
+
   document.addEventListener('DOMContentLoaded', function () {
     var btn = $('btn-memory');
     if (btn) btn.addEventListener('click', createMemory);
-    var back = $('btn-memories-back');
-    if (back) back.addEventListener('click', function () { goToScreen('screen-scan'); });
+    // v1.9.107 — le bouton retour de l'écran Memories est branché
+    // dans app.js (retour ACCUEIL) : l'ancien branchement d'ici
+    // cherchait un bouton « screen-scan » dans la barre du bas,
+    // qui n'existe pas — le bouton était mort.
     render();
+    // v1.9.106 — la nouveauté survit au redémarrage : on ré-applique
+    // les badges dès l'ouverture si le drapeau est là.
+    applyBadges();
+    // v1.9.106 — une génération interrompue (app fermée en route) se
+    // signale au lieu de disparaître en silence.
+    var pending = null;
+    try { pending = localStorage.getItem(PENDING_KEY); } catch (e) {}
+    if (pending) {
+      try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
+      setTimeout(function () {
+        toast('A memory was interrupted — tap KEEP A MEMORY during a scan to retry.');
+      }, 5000);
+    }
   });
 
   /* v1.9.86 — rangement automatique d'un souvenir (la Rencontre s'en
