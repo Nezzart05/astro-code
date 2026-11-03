@@ -14,7 +14,7 @@
 
 ### ▶ Try it live — https://astro-code-5.netlify.app
 
-### 🎬 Watch the 3-minute demo — https://youtu.be/oHBsF2_kNE0
+### 🎬 Watch the 3-minute demo — https://youtu.be/iv2obIcQFNE
 
 **No hoodie? No problem.**
 1. Open the live app on your phone (**Android** — the scan does not work on iPhone yet; see *Honest scope*).
@@ -146,9 +146,9 @@ npx serve .
 
 *Built with Meta AI — five models, five real jobs.*
 
-![Your horoscope, every day](gal-horoscope.jpg)
+![Astro Garden — every sign lives here, and obeys your voice](astro-garden.gif)
 
-*Your horoscope. Every day. Welcome home — this is your constellation.*
+*Astro Garden: the 12 signs live on the farm — command them by voice, and watch them work.*
 
 ![The show lives in the street](gal-street.jpg)
 

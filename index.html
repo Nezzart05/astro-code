@@ -8,7 +8,7 @@
 <link rel="icon" type="image/png" sizes="192x192" href="assets/icons/icon-192.png">
 <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 <title>ASTRO CODE</title>
-<!-- build v1.9.112 -->
+<!-- build v1.9.127 -->
 <!-- three.js pour MindAR (suivi d'image réel) — via importmap, sans build step -->
 <script type="importmap">
 {
@@ -146,6 +146,40 @@
      avec la place du menu fixe du bas en fin de défilement. */
   body > .screen { width: 100%; max-width: 480px; margin: 0 auto; padding-bottom: 112px;
     position: relative; z-index: 1; }
+  /* v1.9.113 — la porte ASTRO GARDEN en haut de My Collection */
+  .door-garden { background: linear-gradient(135deg, #ff8a3c, #ff5e62); color: #fff; box-shadow: 0 8px 24px rgba(255,110,60,.35); }
+  .garden-note { text-align: center; font-size: 13px; opacity: .75; margin: 6px 0 14px; }
+  /* v1.9.115 — la voix du jardin : pastille d'écoute, commandes tactiles, micro */
+  #garden-heard { position: absolute; left: 50%; transform: translateX(-50%); top: calc(max(14px, env(safe-area-inset-top)) + 148px); max-width: 88%; background: #141433d9; color: #ffe9b0; border: 1px solid #ffcf5c66; border-radius: 999px; padding: 7px 14px; font-size: 13px; text-align: center; pointer-events: none; z-index: 5; }
+  #garden-chips { position: absolute; left: 50%; transform: translateX(-50%); bottom: 252px; display: flex; gap: 7px; z-index: 5; flex-wrap: wrap; justify-content: center; width: 96vw; }
+  #garden-chips button { background: #1b1b4ad9; color: #fff; border: 1px solid #ffffff2e; border-radius: 999px; padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; backdrop-filter: blur(8px); }
+  #btn-garden-mic { position: absolute; left: 50%; transform: translateX(-50%); bottom: 182px; width: 62px; height: 62px; border-radius: 50%; border: 2px solid #ffcf5c; background: linear-gradient(135deg, #ff8a3c, #ff5e62); font-size: 26px; cursor: pointer; box-shadow: 0 10px 26px rgba(255,110,60,.45); z-index: 5; }
+  #btn-garden-mic.on { background: linear-gradient(135deg, #e33, #a00); animation: micpulse 1s infinite; }
+  @keyframes micpulse { 0% { box-shadow: 0 0 0 0 rgba(255,80,80,.55); } 100% { box-shadow: 0 0 0 18px rgba(255,80,80,0); } }
+  #btn-garden-music { position: absolute; left: 14px; top: calc(max(14px, env(safe-area-inset-top)) + 140px); width: 44px; height: 44px; border-radius: 50%; background: #1b1b4acc; border: 1px solid #ffffff33; font-size: 19px; cursor: pointer; backdrop-filter: blur(8px); }
+  /* v1.9.113 — MY SANCTUARY : écran plein cadre, ciel peint en fond,
+     le canvas du module est transparent par-dessus. */
+  #screen-sanctuary { position: fixed; inset: 0; z-index: 40; max-width: none; margin: 0; padding: 0; overflow: hidden;
+    background: radial-gradient(120% 90% at 50% 30%, #17102e 0%, #0a0618 55%, #050310 100%); }
+  #screen-sanctuary canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #screen-sanctuary .sanc-hud { position: absolute; left: 14px; top: max(14px, env(safe-area-inset-top)); display: flex; gap: 10px; align-items: center; pointer-events: none; }
+  #screen-sanctuary .av { width: 60px; height: 60px; border-radius: 50%; border: 3px solid #ffcf5c; background: #0b0b2a center / cover; box-shadow: 0 0 18px #ffcf5c88; }
+  #screen-sanctuary .bars { display: flex; flex-direction: column; gap: 6px; }
+  #screen-sanctuary .pill { font-weight: 700; font-size: 13px; letter-spacing: .4px; color: #fff; text-shadow: 0 1px 6px #000; }
+  #screen-sanctuary .bar { width: 96px; height: 14px; border-radius: 9px; background: #ffffff22; border: 2px solid #ffffff44; overflow: hidden; }
+  #screen-sanctuary #luebar { height: 100%; width: 0; background: linear-gradient(90deg, #7bf0e6, #ffcf5c); transition: width .8s; }
+  #screen-sanctuary .sanc-top { position: absolute; right: 14px; top: max(16px, env(safe-area-inset-top)); background: #1b1b4acc; border: 1px solid #ffffff33; border-radius: 20px; padding: 8px 14px; font-weight: 800; font-size: 14px; color: #fff; text-align: center; backdrop-filter: blur(8px); white-space: nowrap; pointer-events: none; }
+  #screen-sanctuary .sanc-top small { display: block; font-weight: 600; font-size: 11px; opacity: .75; margin-top: 2px; }
+  #screen-sanctuary .sanc-title { position: absolute; left: 50%; transform: translateX(-50%); top: max(14px, env(safe-area-inset-top)); background: #141433d9; color: #ffe9b0; border: 1.5px solid #ffcf5c; border-radius: 999px; padding: 7px 16px; font-weight: 800; font-size: 13px; letter-spacing: 1.5px; white-space: nowrap; pointer-events: none; box-shadow: 0 0 16px #ffcf5c33; }
+  #screen-sanctuary .sanc-right { position: absolute; right: 14px; top: max(14px, env(safe-area-inset-top)); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  #screen-sanctuary .sanc-right .sanc-top { position: static; }
+  #btn-sanctuary-back { position: absolute; left: 14px; top: calc(max(14px, env(safe-area-inset-top)) + 86px); background: #1b1b4acc; color: #fff; border: 1px solid #ffcf5c88; border-radius: 999px; padding: 8px 16px; font-weight: 700; font-size: 13px; backdrop-filter: blur(8px); cursor: pointer; }
+  #screen-sanctuary #hint { position: absolute; left: 0; right: 0; bottom: 96px; text-align: center; font-size: 13px; color: #fff; opacity: .85; transition: opacity 1s; pointer-events: none; text-shadow: 0 2px 8px #000; }
+  #screen-sanctuary #boot { position: absolute; inset: 0; background: #070720; display: flex; align-items: center; justify-content: center; transition: opacity .8s; pointer-events: none; font-weight: 700; letter-spacing: 2px; color: #fff; }
+  #sanc-demo { position: absolute; left: 16px; right: 16px; bottom: 108px; background: #1b1b4acc; border: 1px solid #ffffff33; border-radius: 18px; padding: 10px 14px; backdrop-filter: blur(8px); color: #fff; }
+  #sanc-demo label { display: block; font-size: 12px; opacity: .8; font-weight: 600; margin-bottom: 4px; }
+  #sanc-demo input { width: 100%; accent-color: #ffcf5c; }
+
   /* …et pendant qu'un de ces écrans est actif, #app (qui ne contient
      que l'accueil et le scan, tous deux masqués) ne doit pas occuper
      ses 100dvh au-dessus : app.js pose la classe `sub-screen`. */
@@ -1094,7 +1128,6 @@
       <p id="reveal-horo"></p>
       <div class="row">
         <button class="ghost" id="btn-narrate" style="display:none; border-color:rgba(236,72,153,.6);">🔊 HEAR THE SIGN'S VOICE</button>
-        <button class="cta" id="btn-constellation">✦ IN MY CONSTELLATION</button>
       </div>
     </div>
     <div class="foot">ASTRO CODE · BUILD v1.9.112</div>
@@ -1105,6 +1138,8 @@
     <div class="center" style="margin-bottom:10px;">
       <button class="ghost" id="btn-back-collection">← Scan</button>
     </div>
+    <button class="cta door-garden" id="btn-garden-door" type="button">✦&ensp;ASTRO GARDEN</button>
+    <p class="garden-note">The signs you scan live here</p>
     <div class="progress glass">
       <div id="collection-count">0/12 signs unlocked</div>
       <div class="bar"><div id="progress-fill"></div></div>
@@ -1269,12 +1304,28 @@
     <button class="cta" id="btn-wave" style="margin-top:14px; background:linear-gradient(135deg,#159947,#2ee66b); color:#062b12;">👋&ensp;WAVE — I'M OPEN TO A SCAN</button>
     <p class="vitrine-note">🟢 = a wearer who chose to be open to encounters. Nobody is ever shown open by default — privacy first.</p>
     <p class="vitrine-note">GPS and compass calibrate on open — allow location to place wearers around your real position.</p>
-    <button class="cta door door-ghost" id="btn-map-game" style="margin-top:14px;">✦&ensp;MY CONSTELLATION</button>
     <div class="foot">MAP · 500 M AROUND YOU</div>
   </section>
 
   <!-- ============ JEU : CONSTELLATION (volet Jeu, intégré le 20 oct) ============ -->
-  <section class="screen" id="screen-game">
+  <!-- v1.9.113 — ASTRO GARDEN : le diorama 3D posé sur sa planète.
+     Le module sanctuary.js est importé à la première ouverture
+     (voir enterSanctuary dans app.js) ; il lit la collection réelle. -->
+<section class="screen" id="screen-sanctuary">
+  <canvas id="c"></canvas>
+  <div class="sanc-hud"><div class="bars"><div class="pill" id="luetxt">Glow 0/140</div><div class="bar"><div id="luebar"></div></div></div></div>
+  <div class="sanc-title">✦ ASTRO GARDEN</div>
+  <div class="sanc-right"><div class="av" id="av"></div><div class="sanc-top"><span id="cnt">0/12</span> signs<small id="lvl"></small></div></div>
+  <button id="btn-sanctuary-back" type="button">← Home</button>
+  <button id="btn-garden-music" type="button" aria-label="Toggle the garden music">🔊</button>
+  <div id="garden-heard">🎤 Tap the mic — try “Leo, dance”</div>
+  <button id="btn-garden-mic" type="button" aria-label="Voice command">🎤</button>
+  <div id="hint">Drag to turn the world</div>
+  <div id="sanc-demo"><label>DEMO · Slide to preview the evolution</label><input id="sl" type="range" min="0" max="12" step="1" value="0"></div>
+  <div id="boot">ASTRO GARDEN</div>
+</section>
+
+<section class="screen" id="screen-game">
     <div class="game-head">
       <div class="game-title">✦ My constellation</div>
       <div class="game-count" id="game-count">0/12 met</div>

@@ -10,7 +10,7 @@
   const LS_BIO = 'astrocode_meta_bio_v1';
 
   const $ = (id) => document.getElementById(id);
-  const screens = ['screen-onboarding', 'screen-scan', 'screen-reveal', 'screen-collection', 'screen-memories', 'screen-feed', 'screen-passport', 'screen-tryon', 'screen-map', 'screen-exchange', 'screen-game'];
+  const screens = ['screen-onboarding', 'screen-scan', 'screen-reveal', 'screen-collection', 'screen-memories', 'screen-feed', 'screen-passport', 'screen-tryon', 'screen-map', 'screen-exchange', 'screen-game', 'screen-sanctuary'];
 
   /* ---------------- état ---------------- */
   // La collection ne contient QUE des scans réels validés :
@@ -60,6 +60,58 @@
   // scanner par cette poignée (son ancien sélecteur ne visait rien,
   // le bouton « Open the scanner » de la carte était mort).
   window.ASTRO_SHOW = show;
+  /* v1.9.113 — MY SANCTUARY : colle d'intégration du module sanctuary.js
+     (le diorama 3D). Le module lit lui-même localStorage au premier
+     chargement ; à chaque entrée on rafraîchit son état depuis la
+     collection réelle — sauf aperçu ?count=N, que le module gère seul —
+     et on pose l'avatar (signe du passeport, sinon 1er signe collecté).
+     La boucle de rendu ne tourne que lorsque l'écran est visible
+     (window.__SANCTUARY_RUN__, porte dans sanctuary.js). */
+  let sanctuaryLoading = null;
+  let gardenAudio = null, gardenMuted = false;
+  function gardenMusic(on) {
+    try {
+      if (!gardenAudio) {
+        gardenAudio = new Audio('assets/garden-music.mp3');
+        gardenAudio.loop = true; gardenAudio.volume = 0.25;
+        gardenAudio.addEventListener('error', () => { gardenAudio = null; });
+      }
+      if (on && !gardenMuted) { const p = gardenAudio.play(); if (p && p.catch) p.catch(() => {}); }
+      if (!on) gardenAudio.pause();
+    } catch (e) {}
+  }
+  function enterSanctuary() {
+    window.__SANCTUARY_RUN__ = true;
+    try {
+      const av = document.getElementById('av');
+      if (av && !av.dataset.set) {
+        let sign = null;
+        try { const p = JSON.parse(localStorage.getItem('astrocode_passport_v1') || 'null'); sign = p && (p.sign || p.signId || null); } catch (e) {}
+        if (!sign) sign = (collected[0] && collected[0].id) || 'poissons';
+        // le profil = le PORTEUR STYLISÉ du signe (recadré de sa carte) ;
+        // repli sur l'illustration du signe si le portrait n'existe pas.
+        const probe = new Image();
+        probe.onload = () => { av.style.backgroundImage = "url('assets/avatar-" + sign + ".webp')"; };
+        probe.onerror = () => { av.style.backgroundImage = "url('assets/signs/" + sign + ".webp')"; };
+        probe.src = 'assets/avatar-' + sign + '.webp';
+        av.dataset.set = '1';
+      }
+    } catch (e) {}
+    gardenMusic(true);
+    if (window.SANCTUARY) {
+      if (!new URLSearchParams(location.search).has('count')) {
+        let mem = 0;
+        try { mem = JSON.parse(localStorage.getItem('astrocode_memories_v1') || '[]').length; } catch (e) {}
+        window.SANCTUARY.setCollected(collected.map(e => e.id), { memories: mem });
+      }
+      return;
+    }
+    if (!sanctuaryLoading) {
+      window.__SIGNS__ = {};
+      SIGNS.forEach(s => { window.__SIGNS__[s.id] = 'assets/signs/' + s.id + '.webp'; });
+      sanctuaryLoading = import('./garden.js').catch(err => { console.warn('Sanctuary:', err); sanctuaryLoading = null; });
+    }
+  }
   function show(name) {
     if (currentScreen === 'screen-game' && name !== 'screen-game' && window.GAME) window.GAME.exit();
     screens.forEach(id => $(id).classList.toggle('active', id === name));
@@ -88,6 +140,9 @@
     // v1.9.59 — Essayage vocal : caméra à l'ouverture, coupée à la sortie.
     if (name === 'screen-tryon' && window.TRYON) TRYON.onShow();
     if (name !== 'screen-tryon' && window.TRYON) TRYON.onHide();
+    // v1.9.113 — Sanctuaire : entrée/sortie (boucle 3D à la demande).
+    if (name === 'screen-sanctuary') enterSanctuary();
+    if (name !== 'screen-sanctuary') { window.__SANCTUARY_RUN__ = false; gardenMusic(false); if (typeof gRecording !== 'undefined' && gRecording) stopGardenMic(false); }
 
     // v1.7 — le scan démarre DÈS l'entrée sur l'écran : plus de bouton
     // « démarrer ». start() se protège lui-même des appels redondants.
@@ -489,11 +544,6 @@
       };
     };
     bindVoice(sign.factory);
-    // La constellation DÉDIÉE à ce signe : on pose le focus, et l'écran
-    // Constellation accueille avec SA voix (game.js, welcome()).
-    const cb = $('btn-constellation');
-    cb.textContent = '✦ ' + sign.name.toUpperCase() + ' IN MY CONSTELLATION';
-    cb.onclick = () => { window.ASTRO_FOCUS_SIGN = sign.id; show('screen-game'); };
     // Enrichissements IA en arrière-plan — jamais bloquants.
     // (v1.9.108 : le personnage IA est devenu le dernier recours de
     // la chaîne de candidats photo ci-dessus — plus d'appel ici.)
@@ -750,6 +800,90 @@
     // vit ici, avec les autres. Même traitement pour l'écran
     // Empreinte, qui n'avait aucun bouton retour.
     $('btn-memories-back').addEventListener('click', () => show('screen-onboarding'));
+    $('btn-sanctuary-back').addEventListener('click', () => show('screen-onboarding'));
+    // v1.9.127 — ASTRO GARDEN devient la ferme 2D d'Hamza (page autonome
+    // astro-farm.html, même origine : elle lit la collection réelle et
+    // sauvegarde son état). L'ancien jardin 3D reste dormant dans l'app.
+    $('btn-garden-door').addEventListener('click', () => { location.href = 'astro-farm.html'; });
+    $('btn-garden-music').addEventListener('click', () => {
+      gardenMuted = !gardenMuted;
+      $('btn-garden-music').textContent = gardenMuted ? '🔇' : '🔊';
+      gardenMusic(!gardenMuted && currentScreen === 'screen-sanctuary');
+    });
+    // v1.9.115 — LA VOIX DU JARDIN : micro -> Muse Voice Transcribe (la
+    // même recette que l'essayage) -> SANCTUARY.command -> le signe agit.
+    // Les pastilles sous le micro lancent les mêmes commandes au doigt :
+    // la démo ne meurt jamais, même sans micro.
+    const heardEl = $('garden-heard');
+    const setHeard = (txt) => { if (heardEl) heardEl.textContent = txt; };
+    let gRec = null, gChunks = [], gStream = null, gRecording = false;
+    function gardenWavEncode(samples, rate) {
+      const buf = new ArrayBuffer(44 + samples.length * 2);
+      const v = new DataView(buf);
+      const str = (o, s2) => { for (let i = 0; i < s2.length; i++) v.setUint8(o + i, s2.charCodeAt(i)); };
+      str(0, 'RIFF'); v.setUint32(4, 36 + samples.length * 2, true); str(8, 'WAVEfmt ');
+      v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+      v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true);
+      v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, samples.length * 2, true);
+      for (let i = 0; i < samples.length; i++) {
+        const x = Math.max(-1, Math.min(1, samples[i]));
+        v.setInt16(44 + i * 2, x < 0 ? x * 0x8000 : x * 0x7FFF, true);
+      }
+      return new Blob([buf], { type: 'audio/wav' });
+    }
+    function blobToDataUrl(blob) {
+      return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+    }
+    async function gardenTranscribe(blob) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      const ac = new AC();
+      const buf = await ac.decodeAudioData(await blob.arrayBuffer());
+      const off = new OfflineAudioContext(1, Math.max(1, Math.ceil(buf.duration * 16000)), 16000);
+      const src = off.createBufferSource(); src.buffer = buf; src.connect(off.destination); src.start();
+      const rendered = await off.startRendering();
+      const wav = gardenWavEncode(rendered.getChannelData(0), 16000);
+      const dataUrl = await blobToDataUrl(wav);
+      const res = await window.META_AI.callApi('/v1/asr/transcribe', { audio_b64: dataUrl.split(',')[1], filename: 'voice.wav' }, 45000);
+      if (!res || res.error) throw new Error('transcribe');
+      let text = res.transcript || res.text || res.output_text || '';
+      if (!text && res.results && res.results[0]) {
+        const alt = res.results[0].alternatives && res.results[0].alternatives[0];
+        text = (alt && alt.transcript) || res.results[0].transcript || '';
+      }
+      return String(text || '').trim();
+    }
+    async function stopGardenMic(send) {
+      if (!gRecording) return;
+      gRecording = false;
+      $('btn-garden-mic').classList.remove('on');
+      const rec = gRec; gRec = null;
+      await new Promise(res => { rec.onstop = res; try { rec.stop(); } catch (e) { res(); } });
+      if (gStream) { gStream.getTracks().forEach(tr => tr.stop()); gStream = null; }
+      if (!send) return;
+      try {
+        setHeard('🎧 Meta AI is listening…');
+        const text = await gardenTranscribe(new Blob(gChunks, { type: 'audio/webm' }));
+        if (!text) { setHeard('🤔 I heard nothing — tap the mic and try again.'); gardenMusic(currentScreen === 'screen-sanctuary'); return; }
+        const reply = (window.SANCTUARY && window.SANCTUARY.command) ? window.SANCTUARY.command(text) : '';
+        setHeard('🗣 “' + text + '”' + (reply ? ' — ' + reply : ''));
+      } catch (e) { setHeard('⚠️ The voice link failed — tap the mic and try again.'); }
+      gardenMusic(currentScreen === 'screen-sanctuary');
+    }
+    $('btn-garden-mic').addEventListener('click', async () => {
+      if (gRecording) { stopGardenMic(true); return; }
+      if (!window.SANCTUARY || !window.SANCTUARY.command) { setHeard('The garden is still waking up…'); return; }
+      gardenMusic(false); // la musique se tait pendant l'enregistrement
+      try { gStream = await navigator.mediaDevices.getUserMedia({ audio: true }); }
+      catch (e) { setHeard('🎤 Microphone unavailable on this device.'); gardenMusic(currentScreen === 'screen-sanctuary'); return; }
+      gChunks = [];
+      gRec = new MediaRecorder(gStream);
+      gRec.ondataavailable = e => { if (e.data && e.data.size) gChunks.push(e.data); };
+      gRec.start();
+      gRecording = true;
+      $('btn-garden-mic').classList.add('on');
+      setHeard('🔴 Speak now — “Leo, dance”, “Pisces, shake the tree”… tap the mic again when done.');
+      setTimeout(() => { if (gRecording) stopGardenMic(true); }, 5000);
+    });
     $('btn-exchange-back').addEventListener('click', () => show('screen-onboarding'));
     // v1.9.58 — Passeport Hoodie : ouverture, retour, liaison, déliaison.
     const pp0 = loadPassport();
@@ -793,8 +927,6 @@
     if (btnFind) btnFind.addEventListener('click', () => show('screen-map'));
     const doorGame = $('btn-door-game');
     if (doorGame) doorGame.addEventListener('click', () => show('screen-map'));
-    const mapGame = $('btn-map-game');
-    if (mapGame) mapGame.addEventListener('click', () => show('screen-game'));
     const doorColl = $('btn-door-collection');
     if (doorColl) doorColl.addEventListener('click', () => show('screen-collection'));
     const doorMem = $('btn-door-memories');
