@@ -142,7 +142,7 @@ npx serve .
 
 *Two signs. One creature. One moment that belongs to neither sign alone.*
 
-![Built with Meta AI](gal-meta.jpg)
+![Built with Meta AI — the five models, from the demo film](gal-models.jpg)
 
 *Built with Meta AI — five models, five real jobs.*
 
