@@ -3,7 +3,7 @@
    arrivent dès la visite suivante ; MÉDIAS lourds (vidéo, cibles, images)
    en cache-first pour la vitesse. Le nom de cache change à CHAQUE
    livraison : c'est ce qui force les téléphones à abandonner l'ancien code. */
-const CACHE = 'astro-code-v1.9.111';
+const CACHE = 'astro-code-v1.9.112';
 
 const ASSETS = [
   './',
