@@ -31,17 +31,17 @@ No printed hoodie within reach? Scan a wearer straight from this page. These are
 
 **How:** click a photo to open it full-screen on your computer, open the app on your Android phone, link the demo hoodie (code above), and point your phone at the photo — like a wearer standing in front of you. Let the photo fill as much of your frame as you can.
 
-![Scan this wearer — Leo](scan-wearer-leo.jpg)
-
-*Leo — scan her for an encounter and its icebreaker.*
-
 ![Scan this wearer — Pisces](scan-wearer-pisces.jpg)
 
 *Pisces — scan him for the show and its horoscope.*
 
-![Scan this wearer — Pisces, in the city](scan-wearer-pisces-city.jpg)
+![Scan this wearer — Leo](scan-wearer-leo.jpg)
 
-*Pisces again — a second wearer, same sign.*
+*Leo — scan her for an encounter and its icebreaker.*
+
+![Scan the two wearers together](scan-wearers-duo.jpg)
+
+*The two wearers, one frame, two signs — scan the pair.*
 
 For the **Fusion**, hold the two flat targets in [`demo-targets/`](demo-targets/) side by side in one frame.
 
