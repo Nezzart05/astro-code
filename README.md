@@ -16,12 +16,13 @@
 
 ### 🎬 Watch the 3-minute demo — https://youtu.be/iv2obIcQFNE
 
-**No hoodie? No problem.**
-1. Open the live app on your phone (**Android** — the scan does not work on iPhone yet; see *Honest scope*).
-2. Link a hoodie with the demo code **`ASTRO-8842-PISCES`** (you become Pisces).
-3. Point your camera at the target images in [`demo-targets/`](demo-targets/) — scan **Pisces** for the solo show, scan **Leo** for an encounter, hold both in frame for the **fusion**.
-
-The scan works on a screen showing the target images.
+**No hoodie? No problem — and no sign-up.** The app opens in demo mode:
+1. Open the live app on your phone (**Android** — the scan does not work on iPhone yet; see *Honest scope*) and tap **SCAN**.
+2. Aim at the wearer photos in **[Scan a wearer](#-scan-a-wearer--the-judges-shortcut)** just below — full screen on a computer, or printed. It just works.
+3. During any scan, tap **KEEP A MEMORY** — the essential: the moment, kept as a flat illustrated artwork.
+4. Scan **Pisces** (the show, then its card for today's horoscope), scan **Leo** (the encounter and its icebreaker), then put **both in one frame** for the Duo Fusion.
+5. **Try a Hoodie Live** — no hoodie needed: pick a sign and a colour, and see it on you, live.
+6. Then wander: **Astro Garden**, the farm your scans feed (in My Collection), and **Around Me** with the **Wave**.
 
 ---
 
@@ -31,15 +32,15 @@ No printed hoodie within reach? Scan a wearer straight from this page. These are
 
 **How:** click a photo to open it full-screen on your computer, open the app on your Android phone, link the demo hoodie (code above), and point your phone at the photo — like a wearer standing in front of you. Let the photo fill as much of your frame as you can.
 
-![Scan this wearer — Pisces](scan-wearer-pisces.jpg)
+[![Scan this wearer — Pisces](scan-wearer-pisces.jpg)](https://raw.githubusercontent.com/Nezzart05/astro-code/main/scan-wearer-pisces.jpg)
 
 *Pisces — scan him for the show and its horoscope.*
 
-![Scan this wearer — Leo](scan-wearer-leo.jpg)
+[![Scan this wearer — Leo](scan-wearer-leo.jpg)](https://raw.githubusercontent.com/Nezzart05/astro-code/main/scan-wearer-leo.jpg)
 
 *Leo — scan her for an encounter and its icebreaker.*
 
-![Scan the two wearers together](scan-wearers-duo.jpg)
+[![Scan the two wearers together](scan-wearers-duo.jpg)](https://raw.githubusercontent.com/Nezzart05/astro-code/main/scan-wearers-duo.jpg)
 
 *The two wearers, one frame, two signs — scan the pair.*
 
