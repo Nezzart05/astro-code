@@ -65,7 +65,7 @@ Five Meta models, each doing the one job it is best at — chained inside a sing
 | **Muse Wonder** | Writes the personalized horoscope of every sign you scan |
 | **Muse Spark** | Writes the encounter icebreaker between two signs — and moderates every Imprint before it is published |
 | **Muse Image** | Turns a scan into a Memory: a flat-color illustration where the sign creature stays alive |
-| **Muse Voice Transcribe** | Hears you in *Try a Hoodie Live* — you speak, Spark understands, the hoodie changes |
+| **Muse Voice Transcribe** | Hears you in *Try a Hoodie Live* — you speak, Spark understands, the hoodie changes — and in **Astro Garden**, where the signs you met obey your voice |
 
 All Meta calls go through a server-side proxy (Netlify Function) with an allowlist, per-IP rate limits and response caps — API keys never reach the client.
 
