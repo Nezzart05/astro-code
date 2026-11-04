@@ -168,11 +168,11 @@ The demo film combines real app screen recordings with AI-generated street scene
 
 ## What's next
 
-The phone is today's screen. The encounter belongs in the street, hands free — the same Wave, the same living sign, seen through smart glasses:
+Today, Astro Code lives on a phone. Tomorrow, we imagine it on smart glasses — the same living signs, right there in the street, hands free.
 
-![What's next — Astro Code on smart glasses (concept)](whats-next-glasses-wide.jpg)
+![Astro Code on smart glasses (concept)](whats-next-glasses-wide.jpg)
 
-*What's next — « LEO nearby · 4m », and the Wave answered: « On my way! » — **CONCEPT · FUTURE VISION**: the destination, shown as a concept image.*
+*Astro Code on smart glasses — **CONCEPT · FUTURE VISION**.*
 
 **Astro Code. Not followed. Met.**
 
