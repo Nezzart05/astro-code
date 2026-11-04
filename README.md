@@ -30,7 +30,7 @@
 
 No printed hoodie within reach? Scan a wearer straight from this page. These are AI-generated wearers (the physical hoodies are not produced yet) — but the signs on their chests are the **real target artwork**, and the app scans them: each photo below was verified on a real MindAR test bench, running the same targets file as the live app.
 
-**How:** click a photo to open it full-screen on your computer, open the app on your Android phone, link the demo hoodie (code above), and point your phone at the photo — like a wearer standing in front of you. Let the photo fill as much of your frame as you can.
+**How:** click a photo to open it full-screen on your computer, open the app on your Android phone, tap SCAN, and point your phone at the photo — like a wearer standing in front of you. Let the photo fill as much of your frame as you can.
 
 [![Scan this wearer — Pisces](scan-wearer-pisces.jpg)](https://raw.githubusercontent.com/Nezzart05/astro-code/main/scan-wearer-pisces.jpg)
 
