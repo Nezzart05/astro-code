@@ -150,13 +150,13 @@ npx serve .
 
 *Astro Garden: the 12 signs live on the farm — command them by voice, and watch them work.*
 
-![The show lives in the street](gal-street.jpg)
-
-*The show lives in the street.*
-
 ![Astro Code on smart glasses — concept](gal-glasses.jpg)
 
 *Astro Code on smart glasses — CONCEPT · FUTURE VISION: the destination.*
+
+![The show lives in the street](gal-street.jpg)
+
+*The show lives in the street.*
 
 ## The project
 
