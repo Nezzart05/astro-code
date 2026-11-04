@@ -170,7 +170,7 @@ The demo film combines real app screen recordings with AI-generated street scene
 
 Today, Astro Code lives on a phone. Tomorrow, we imagine it on smart glasses — the same living signs, right there in the street, hands free.
 
-![Astro Code on smart glasses (concept)](whats-next-glasses-wide.jpg)
+![Astro Code on smart glasses (concept)](whats-next-glasses-wide-v2.jpg)
 
 *Astro Code on smart glasses — **CONCEPT · FUTURE VISION**.*
 
